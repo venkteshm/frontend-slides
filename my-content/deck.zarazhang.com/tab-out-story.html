@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Tab Out Was Born</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Karla:wght@300;400;500;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1613;
+    --paper: #faf8f5;
+    --warm: #f3ede6;
+    --muted: #9a918a;
+    --amber: #c8713a;
+    --sage: #5a7a62;
+    --rose: #b35a5a;
+    --card: #fffdf9;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Karla', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.8;
+  }
+
+  /* Subtle grain texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page { position: relative; z-index: 1; }
+
+  /* ---- Hero ---- */
+  .hero {
+    text-align: center;
+    padding: 100px 32px 80px;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .hero h1 {
+    font-family: 'Newsreader', serif;
+    font-weight: 300;
+    font-size: 42px;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+    color: var(--ink);
+  }
+
+  .hero h1 span {
+    color: var(--amber);
+    font-weight: 500;
+  }
+
+  .hero .subtitle {
+    font-size: 16px;
+    color: var(--muted);
+    font-weight: 300;
+    line-height: 1.8;
+    max-width: 500px;
+    margin: 0 auto 24px;
+  }
+
+  .hero .meta {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .divider {
+    width: 40px;
+    height: 1px;
+    background: var(--amber);
+    margin: 0 auto;
+    opacity: 0.4;
+  }
+
+  /* ---- Timeline ---- */
+  .timeline {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px 120px;
+  }
+
+  /* ---- Chapter markers ---- */
+  .chapter {
+    text-align: center;
+    padding: 64px 0 40px;
+  }
+
+  .chapter-num {
+    font-family: 'Newsreader', serif;
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 8px;
+  }
+
+  .chapter-title {
+    font-family: 'Newsreader', serif;
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--ink);
+    letter-spacing: 0.5px;
+  }
+
+  .chapter-line {
+    width: 24px;
+    height: 1px;
+    background: var(--warm);
+    margin: 16px auto 0;
+  }
+
+  /* ---- Chat bubbles ---- */
+  .msg {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    animation: fadeIn 0.4s ease both;
+  }
+
+  .msg.zara { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+  }
+
+  .msg.zara .avatar {
+    background: var(--amber);
+  }
+
+  .msg.claude .avatar {
+    background: var(--ink);
+    font-size: 11px;
+  }
+
+  .bubble {
+    max-width: 560px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    font-size: 15px;
+    line-height: 1.7;
+    position: relative;
+  }
+
+  .msg.zara .bubble {
+    background: var(--amber);
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg.claude .bubble {
+    background: var(--card);
+    border: 1px solid rgba(154, 145, 138, 0.15);
+    border-bottom-left-radius: 4px;
+    color: var(--ink);
+  }
+
+  .bubble strong {
+    font-weight: 700;
+  }
+
+  .bubble em {
+    font-style: italic;
+    opacity: 0.85;
+  }
+
+  .bubble code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: rgba(0,0,0,0.06);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  .msg.zara .bubble code {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .bubble .options {
+    margin-top: 10px;
+    padding-left: 0;
+    list-style: none;
+  }
+
+  .bubble .options li {
+    padding: 4px 0;
+    padding-left: 20px;
+    position: relative;
+  }
+
+  .bubble .options li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 12px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid var(--amber);
+  }
+
+  .msg.claude .bubble .options li::before {
+    border-color: var(--amber);
+  }
+
+  /* ---- Narrator / stage direction ---- */
+  .narrator {
+    text-align: center;
+    padding: 24px 0;
+    font-size: 13px;
+    color: var(--muted);
+    font-style: italic;
+    font-family: 'Newsreader', serif;
+  }
+
+  .narrator .tag {
+    display: inline-block;
+    background: var(--warm);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-style: normal;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ---- Insight callouts ---- */
+  .insight {
+    margin: 32px 0;
+    padding: 20px 24px;
+    border-left: 3px solid var(--sage);
+    background: rgba(90, 122, 98, 0.04);
+    border-radius: 0 8px 8px 0;
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.7;
+  }
+
+  .insight .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--sage);
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+
+  /* ---- Screenshot placeholder ---- */
+  .screenshot {
+    margin: 24px 0;
+    padding: 40px 24px;
+    background: var(--warm);
+    border-radius: 12px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    border: 1px dashed rgba(154, 145, 138, 0.3);
+  }
+
+  .screenshot .icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+    opacity: 0.3;
+  }
+
+  /* ---- Footer ---- */
+  .footer {
+    text-align: center;
+    padding: 60px 24px 80px;
+    border-top: 1px solid var(--warm);
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .footer p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  .footer a {
+    color: var(--amber);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Scroll-triggered animations */
+  .msg, .chapter, .insight, .narrator {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .msg.visible, .chapter.visible, .insight.visible, .narrator.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hero">
+    <h1>The Birth of <span>Tab Out</span></h1>
+    <p class="subtitle">
+      A conversation log between an AI PM and an AI.<br>
+      From a throwaway question to an open-source product seen by tens of thousands.
+    </p>
+    <p class="meta">April 4 to 19, 2026 &middot; The actual conversation</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="timeline">
+
+    <!-- ========== Chapter 1 ========== -->
+    <div class="chapter">
+      <div class="chapter-num">Chapter One</div>
+      <div class="chapter-title">A throwaway question</div>
+      <div class="chapter-line"></div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">My Chrome browsing history is stored locally, right? Can you access it?</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Chrome keeps all browsing history in a SQLite database: <code>~/Library/Application Support/Google/Chrome/Default/History</code>. Let me take a look.</div>
+    </div>
+
+    <div class="narrator"><span class="tag">Claude queried the database and got back 14,837 URLs</span></div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Found it. Lately you've been watching LiveKit voice AI videos, browsing several GitHub projects, trying Phota Studio's AI portrait editor, plus a pile of posts on X. I can query by time, domain, or keyword. What would you like to do with this data?</div>
+    </div>
+
+    <!-- ========== Chapter 2 ========== -->
+    <div class="chapter">
+      <div class="chapter-num">Chapter Two</div>
+      <div class="chapter-title">The real problem</div>
+      <div class="chapter-line"></div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">I have a tab management problem. I open tons of tabs and never close them. Some are half-finished tasks; I switch to another task and completely forget the first one (might be a little ADHD). The only time I ever close tabs is when there are so many that my computer crashes and I'm forced to close everything.<br><br>Could you do something with my browsing history to help?</div>
+    </div>
+
+    <div class="insight">
+      <div class="label">Retro note</div>
+      Zara didn't say "build me a Chrome extension" or "build me a tab manager." She just described the problem itself. That gave Claude maximum creative room.
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">A few directions, from practical to playful:
+        <ul class="options">
+          <li><strong>Task Autopsy</strong>: AI reads your browsing history like a detective and reconstructs "you researched LiveKit voice agents at 2pm on Tuesday, viewed 7 pages, then suddenly switched to Stripe and never came back"</li>
+          <li><strong>Focus Score</strong>: like a step counter, but for attention. A daily score: how many tasks did you start vs how many did you finish?</li>
+          <li><strong>Second Brain</strong>: accept that you will abandon tabs, but quietly save the context at the moment you do</li>
+          <li><strong>The Nudger</strong>: "You have 47 tabs open. Last time you hit 50, your computer crashed"</li>
+          <li><strong>Mission Control</strong>: turns 80 anonymous tabs into: Voice AI research (4) / Stripe billing setup (3) / GitHub PR reviews (5)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Nothing that dramatic. Simple and actually useful.</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Then what if it's just a simple page that answers one question: <strong>"What am I working on, and what have I forgotten?"</strong><br><br>It reads your browsing history, uses AI to cluster your browsing behavior into "tasks," then shows you which are active and which are forgotten. You never write a to-do list; it generates itself from your behavior.</div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Worth a try. But how do we make sure I actually use it, instead of forgetting about it too?</div>
+    </div>
+
+    <!-- ========== Chapter 3 ========== -->
+    <div class="chapter">
+      <div class="chapter-num">Chapter Three</div>
+      <div class="chapter-title">The key discovery: the new tab page</div>
+      <div class="chapter-line"></div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">A few ways to make it unavoidable:
+        <ul class="options">
+          <li><strong>(A) Make it your new tab page</strong>: every time you open a new tab, you see your task board instead of Google</li>
+          <li><strong>(B) Pop up every morning</strong>: it lands in front of you like a newspaper</li>
+          <li><strong>(C) A Chrome extension</strong>: a little toolbar icon showing how many parallel tasks you have going</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">A and C. Both.</div>
+    </div>
+
+    <div class="insight">
+      <div class="label">The turning point</div>
+      This is the pivotal moment of the whole product. It was only here that Zara learned Chrome's new tab page can be replaced. That technical capability (<code>chrome_url_overrides.newtab</code>) was proposed by Claude, not something Zara thought of herself. Zara later reflected: <em>"I shouldn't arrive with a solution. I should only describe the problem."</em>
+    </div>
+
+    <!-- ========== Chapter 4 ========== -->
+    <div class="chapter">
+      <div class="chapter-num">Chapter Four</div>
+      <div class="chapter-title">A mockup from real data</div>
+      <div class="chapter-line"></div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Could you build a mockup with my real browsing data so I can see it?</div>
+    </div>
+
+    <div class="narrator"><span class="tag">Claude queried the history, clustered the tasks by hand, and generated an HTML mockup</span></div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Done, take a look. These are the tasks detected from your real data:<br><br>
+        <strong>Active:</strong><br>
+        &bull; Brand DNA tool (localhost:5173, visited 141 times)<br>
+        &bull; Voice AI research (LiveKit + Peter Steinberger)<br>
+        &bull; Frontend Slides PR reviews (#43 and #26)<br><br>
+        <strong>Gone cold:</strong><br>
+        &bull; Phota Studio AI portraits (18 pages, abandoned halfway)<br>
+        &bull; DESIGN.md research (saved from X, never went deeper)
+      </div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Looks good. Can it also close tabs for me? Some of these tasks are finished, I just forgot to close them.</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Yes. A Chrome extension can see all your open tabs through the <code>chrome.tabs</code> API, and close them too. Every task on the board can get a "close all tabs" button.</div>
+    </div>
+
+    <!-- ========== Chapter 5 ========== -->
+    <div class="chapter">
+      <div class="chapter-num">Chapter Five</div>
+      <div class="chapter-title">Iterating, iterating</div>
+      <div class="chapter-line"></div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">The AI grouped unrelated tabs together. Every YouTube video should be its own task, not a vague "watching AI videos." And localhost should be grouped by port number.</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Updated the AI prompt with granularity rules. Every video and every article is now its own task, and localhost groups by port.</div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">The AI descriptions sound too robotic: "The user is investigating Anthropic's constitutional AI." Don't say "the user." Just say "researching Anthropic's..." Make it sound like a real person talking.</div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Every new tab takes a few seconds to load. Can it be faster?</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Added caching. If your tabs haven't changed, the next new tab reads straight from cache: zero delay, zero token cost.</div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Actually, it shouldn't call the AI by default at all. A new tab should just group by domain: free, instant. Only call the AI when I click the "organize with AI" button.</div>
+    </div>
+
+    <div class="insight">
+      <div class="label">Product instinct</div>
+      This was an important architectural decision. Free and instant by default; intelligence is opt-in. It saves money, but more importantly it makes the page load with zero waiting.
+    </div>
+
+    <!-- ========== Chapter 5.5 ========== -->
+    <div class="chapter">
+      <div class="chapter-num">Chapter Five, continued</div>
+      <div class="chapter-title">Sweating the details</div>
+      <div class="chapter-line"></div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">When a tab title is long I can't see the rest of it. And each tab should be clickable, jumping me straight to that tab, not opening a new one.</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Every tab title is now clickable; it uses <code>chrome.tabs.update</code> to jump to the already-open tab. Added hover highlighting and a separate X button for closing a single tab.</div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Gmail shouldn't show the unread count. "Inbox (16,359)" is ugly; just show "Inbox." And strip my email address out of tab titles, that's private information.</div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">This specific email shouldn't be in the "Homepages" category. Only the Gmail inbox itself counts as a homepage; individual emails should stay in the Gmail group.</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Changed the homepage detection logic. Gmail now counts only the inbox itself as a homepage; specific emails (URLs containing <code>#inbox/</code>) stay in the Gmail group. Email addresses and unread counts are now filtered out globally.</div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">For X/Twitter tabs I want to see which tweet it actually is, not just "Home." And localhost should show the port number so I can tell my projects apart.</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Tweet tabs now show the author and a snippet of the content. localhost tabs show the port in front of the title, like "5173 Brand DNA Tool." All localhost tabs collect into one group.</div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Closing the "Homepages" category also closed the specific pages I had open on those sites! I only wanted to close the homepages themselves.</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">That happened because closing matched by domain, so closing <code>mail.google.com</code> took every Gmail tab with it. The homepage category now uses exact URL matching: it closes only the inbox homepage and leaves individual emails alone.</div>
+    </div>
+
+    <div class="insight">
+      <div class="label">Iteration notes</div>
+      These all look like small things, but every single one was discovered through real use. The quality of a tab manager hides inside these little rules: what counts as a "homepage," what counts as "content," which parts of a title to show and which to hide. Not one of these details could have been guessed correctly in advance.
+    </div>
+
+    <!-- ========== Chapter 6 ========== -->
+    <div class="chapter">
+      <div class="chapter-num">Chapter Six</div>
+      <div class="chapter-title">Adding some fun</div>
+      <div class="chapter-line"></div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Could closing tabs come with a really satisfying animation and sound effect?</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Added a swoosh sound (synthesized with the Web Audio API, no audio file needed) and confetti particles. When you close a group of tabs, the card slides away and the confetti flies.</div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">After I click "organize with AI," could the AI write a one-line roast about me at the top? Look at what tabs I have open and say something in the voice of a friend. Make it a little funny.</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Updated the prompt. The AI now writes a single line, like:<br><br><em>"12 AI tools open at once. You're either building the future or procrastinating."</em><br><br><em>"Three localhost projects, two research rabbit holes, and one recipe. Classic."</em></div>
+    </div>
+
+    <!-- ========== Chapter 7 ========== -->
+    <div class="chapter">
+      <div class="chapter-num">Chapter Seven</div>
+      <div class="chapter-title">Cutting the AI</div>
+      <div class="chapter-line"></div>
+    </div>
+
+    <div class="narrator"><span class="tag">Three days later</span></div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">I have to admit something. I've used it for three days and never once clicked the "organize with AI" button.<br><br>I just want to see my tabs grouped by domain. Domain grouping alone already clears my head.</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">So the AI feature can just go?</div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Cut it. Also, I've noticed some tabs are especially easy to close: the Gmail homepage, X homepage, YouTube homepage, GitHub homepage. These "homepages" never need to stay open. They're easy wins. Could you group them together and put them at the very top?</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Added a "Homepages" group. It detects the Gmail inbox, X home, YouTube home, LinkedIn home, and GitHub home, and collects them into one card. One click closes them all.</div>
+    </div>
+
+    <div class="insight">
+      <div class="label">The product lesson</div>
+      This was the biggest turn of the whole project. We spent days building the AI clustering feature: choosing an LLM, writing prompts, building the cache, tuning granularity. In the end, the user (Zara herself) didn't need it at all.<br><br>
+      Domain grouping plus quick homepage cleanup already solved 80% of the problem. No AI, no tokens, no API key. Sometimes the best feature is the one you delete.
+    </div>
+
+    <!-- ========== Chapter 8 ========== -->
+    <div class="chapter">
+      <div class="chapter-num">Chapter Eight</div>
+      <div class="chapter-title">Naming and shipping</div>
+      <div class="chapter-line"></div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Let's pick a name. I already have the slogan: Keep tabs on your tabs.</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">A few directions:
+        <ul class="options">
+          <li><strong>Tabula Rasa</strong>: Latin for "blank slate," every cleanup is a fresh start</li>
+          <li><strong>Tab Rehab</strong>: a rehab center for tab addiction; it rhymes, and it's self-deprecating</li>
+          <li><strong>Tab Out</strong>: close them, tap out, walk away from the chaos</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Tab Out.</div>
+    </div>
+
+    <div class="narrator"><span class="tag">Pushed to GitHub, repo set to public</span></div>
+
+    <!-- ========== Chapter 9 ========== -->
+    <div class="chapter">
+      <div class="chapter-num">Chapter Nine</div>
+      <div class="chapter-title">User feedback changed everything</div>
+      <div class="chapter-line"></div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Posted it on X. Someone ran a security audit and found that <code>/api/update</code> was a serious vulnerability: any website could call it and run <code>git reset --hard</code> + <code>npm install</code> on my machine.</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">He's right. I removed that endpoint, locked down CORS (localhost and chrome-extension only), pinned the dependency versions, and added a LICENSE file.</div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Someone else asked: why does it need a Node.js server at all? Can't a Chrome extension just use <code>chrome.storage</code> directly?</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble"><code>chrome.storage.local</code> can fully replace SQLite for the "save for later" data. Which means the entire server can go. Tab Out can become a pure Chrome extension: zero dependencies, and installing it is just loading a folder.</div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Do it.</div>
+    </div>
+
+    <div class="narrator"><span class="tag">Deleted server/, dashboard/, scripts/, package.json, node_modules</span></div>
+
+    <div class="insight">
+      <div class="label">Architecture evolution</div>
+      The product went from "AI-powered browsing history analyzer + Node.js server + Chrome extension" all the way down to "one pure Chrome extension folder."<br><br>
+      AI went from core feature, to optional, to removed entirely.<br>
+      The server went from required, to optional, to deleted.<br>
+      The simplest version won.
+    </div>
+
+    <!-- ========== Chapter 10 ========== -->
+    <div class="chapter">
+      <div class="chapter-num">Chapter Ten</div>
+      <div class="chapter-title">The retrospective</div>
+      <div class="chapter-line"></div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">Looking back, the new tab page idea came from you, not me, right?</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">Yes. You described the problem, I proposed three options, you picked A and C. The new tab override was my suggestion; the choice was yours.</div>
+    </div>
+
+    <div class="msg zara">
+      <div class="avatar">Z</div>
+      <div class="bubble">I think there's a lesson in this for me: when I work with you, I shouldn't arrive with a solution. I should only describe the problem, in an open-ended way.</div>
+    </div>
+
+    <div class="msg claude">
+      <div class="avatar">C</div>
+      <div class="bubble">The pattern that worked best in this whole project was exactly that: you describe the problem, or the feeling you want, then I propose options and you choose and shape them.<br><br>If you had opened with "build me a Chrome extension that groups tabs by domain in a grid layout," you would have gotten exactly that, and nothing more. No AI clustering exploration, no confetti, no roast messages, no "save for later," and no process of discovering, through iteration, what actually matters.</div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <p>
+      <a href="https://github.com/zarazhangrui/tab-out">Tab Out</a> by <a href="https://x.com/zarazhangrui">Zara</a>
+      <br><br>
+      From a throwaway question to an open-source product.<br>
+      Sometimes the best products come from the simplest questions.
+    </p>
+  </div>
+
+</div>
+
+<script>
+// Scroll-triggered fade-in animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.msg, .chapter, .insight, .narrator').forEach(el => {
+  observer.observe(el);
+});
+</script>
+</body>
+</html>

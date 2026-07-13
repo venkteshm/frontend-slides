@@ -1,0 +1,2519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code as a medium for storytelling</title>
+
+<!-- ============================================================
+     FONTS (Sakura Chroma system)
+     Paytone One   = warm rounded display voice (readable from afar)
+     Albert Sans   = clean body voice
+     JetBrains Mono = data / spec / page-number voice
+     ============================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Paytone+One&family=Albert+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   THEME TOKENS — Sakura Chroma
+   Warm cream paper + warm-brown ink + six primary accents.
+   Change these variables to retheme the whole deck.
+   ============================================================ */
+:root {
+    --paper:    #F1E6CB;
+    --paper-dk: #E5D6B0;
+    --ink:      #3A2516;
+    --red:      #E5392A;
+    --pink:     #E54489;
+    --orange:   #F09131;
+    --green:    #3D9F47;
+    --blue:     #3F8BC4;
+    --yellow:   #F0BC2A;
+
+    --stage-bg: #2A1A0F;          /* letterbox color around the 16:9 stage */
+    --slide-bg: var(--paper);
+
+    --disp: 'Paytone One', sans-serif;
+    --body: 'Albert Sans', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+
+    /* 32-point starburst seal (signature Sakura Chroma shape) */
+    --starburst: polygon(50.0% 0.0%, 54.0% 9.2%, 59.8% 1.0%, 61.9% 10.8%, 69.1% 3.8%, 69.3% 13.8%, 77.8% 8.4%, 76.0% 18.3%, 85.4% 14.6%, 81.7% 24.0%, 91.6% 22.2%, 86.2% 30.7%, 96.2% 30.9%, 89.2% 38.1%, 99.0% 40.2%, 90.8% 46.0%, 100.0% 50.0%, 90.8% 54.0%, 99.0% 59.8%, 89.2% 61.9%, 96.2% 69.1%, 86.2% 69.3%, 91.6% 77.8%, 81.7% 76.0%, 85.4% 85.4%, 76.0% 81.7%, 77.8% 91.6%, 69.3% 86.2%, 69.1% 96.2%, 61.9% 89.2%, 59.8% 99.0%, 54.0% 90.8%, 50.0% 100.0%, 46.0% 90.8%, 40.2% 99.0%, 38.1% 89.2%, 30.9% 96.2%, 30.7% 86.2%, 22.2% 91.6%, 24.0% 81.7%, 14.6% 85.4%, 18.3% 76.0%, 8.4% 77.8%, 13.8% 69.3%, 3.8% 69.1%, 10.8% 61.9%, 1.0% 59.8%, 9.2% 54.0%, 0.0% 50.0%, 9.2% 46.0%, 1.0% 40.2%, 10.8% 38.1%, 3.8% 30.9%, 13.8% 30.7%, 8.4% 22.2%, 18.3% 24.0%, 14.6% 14.6%, 24.0% 18.3%, 22.2% 8.4%, 30.7% 13.8%, 30.9% 3.8%, 38.1% 10.8%, 40.2% 1.0%, 46.0% 9.2%);
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-normal: 0.6s;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   Include this ENTIRE file in every presentation.
+   Slides are authored at 1920×1080 and scaled as a whole.
+   =========================================== */
+
+/* 1. Lock the browser viewport */
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+
+/* 2. Full-window deck viewport */
+.deck-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+
+/* 3. Fixed 16:9 design canvas.
+   JavaScript sets transform: translate(...) scale(...). */
+.deck-stage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    transform-origin: 0 0;
+    background: var(--slide-bg, #fff);
+}
+
+/* 4. Slides stack inside the fixed stage.
+   Content must be laid out at 1920×1080, not reflowed per device. */
+.slide {
+    position: absolute;
+    inset: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: var(--slide-bg, #fff);
+}
+
+.slide.active,
+.slide.visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+}
+
+/* 5. Keep media inside authored slide bounds */
+img,
+video,
+canvas,
+svg {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* 6. Presentation chrome stays outside the slide design system */
+.deck-controls {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+
+/* 7. Print one fixed-size slide per page */
+@media print {
+    html,
+    body {
+        width: 1920px;
+        height: auto;
+        overflow: visible;
+        background: #fff;
+    }
+
+    .deck-viewport {
+        position: static;
+        overflow: visible;
+        background: #fff;
+    }
+
+    .deck-stage {
+        position: static;
+        width: auto;
+        height: auto;
+        transform: none !important;
+        background: none;
+    }
+
+    .slide {
+        position: relative;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        width: 1920px;
+        height: 1080px;
+        break-after: page;
+        page-break-after: always;
+    }
+
+    .slide:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
+
+    .deck-controls {
+        display: none !important;
+    }
+}
+
+/* 8. Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+}
+
+/* ============================================================
+   PAPER GRAIN — halftone-dot texture baked into the paper
+   BACKGROUND (not an overlay), so photos and videos stay crisp.
+   ============================================================ */
+.slide,
+.pcard,
+.qbox {
+    background-image: radial-gradient(circle at 1px 1px, rgba(58,37,22,0.10) 1px, transparent 1.6px);
+    background-size: 4px 4px;
+}
+
+/* QR card — paper tile with ink border + hard offset shadow,
+   holding the inline QR for "take this deck with you" moments */
+.qr-card {
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    box-shadow: 8px 8px 0 var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Slide fade between pages */
+.slide { transition: opacity 0.28s ease; }
+
+/* ============================================================
+   REVEAL ANIMATIONS — staggered rise-in on the active slide
+   ============================================================ */
+.reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.reveal.d1 { transition-delay: 0.08s; }
+.reveal.d2 { transition-delay: 0.18s; }
+.reveal.d3 { transition-delay: 0.28s; }
+.reveal.d4 { transition-delay: 0.38s; }
+.reveal.d5 { transition-delay: 0.48s; }
+.reveal.d6 { transition-delay: 0.58s; }
+.reveal.d7 { transition-delay: 0.68s; }
+
+/* ============================================================
+   TYPOGRAPHY ROLES (authored at 1920×1080 stage size)
+   ============================================================ */
+.disp-hero {        /* cover title */
+    font-family: var(--disp); font-weight: 400;
+    font-size: 148px; line-height: 0.96; letter-spacing: -0.01em;
+    color: var(--ink); text-transform: uppercase;
+}
+.disp-statement {   /* full-slide section statements */
+    font-family: var(--disp); font-weight: 400;
+    font-size: 104px; line-height: 1.0; letter-spacing: -0.01em;
+    color: var(--ink); text-transform: uppercase;
+}
+.disp-section {     /* topbar slide titles */
+    font-family: var(--disp); font-weight: 400;
+    font-size: 72px; line-height: 1.0; letter-spacing: -0.008em;
+    color: var(--ink); text-transform: uppercase;
+}
+.disp-sub {         /* large supporting display line — sentence case */
+    font-family: var(--disp); font-weight: 400;
+    font-size: 40px; line-height: 1.18; letter-spacing: -0.005em;
+    color: var(--ink);
+}
+.disp-card {        /* card titles — sentence case */
+    font-family: var(--disp); font-weight: 400;
+    font-size: 34px; line-height: 1.22; letter-spacing: 0;
+    color: var(--ink);
+}
+/* Inline emphasis inside display type = color shift, never italic */
+.disp-hero em, .disp-statement em, .disp-section em, .disp-sub em, .disp-card em {
+    font-style: normal; color: var(--red);
+}
+em.blue { color: var(--blue); }
+
+.body-text {
+    font-family: var(--body); font-weight: 400;
+    font-size: 34px; line-height: 1.5; color: var(--ink);
+}
+.body-lead {
+    font-family: var(--body); font-weight: 600;
+    font-size: 38px; line-height: 1.45; color: var(--ink);
+}
+.micro {            /* tracked-caps eyebrow labels */
+    font-family: var(--body); font-weight: 700;
+    font-size: 19px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--ink);
+}
+.mono-tag {
+    font-family: var(--mono); font-weight: 400;
+    font-size: 18px; letter-spacing: 0.04em; color: var(--ink);
+}
+
+/* ============================================================
+   SLIDE CHROME — frame, topbar, page number
+   ============================================================ */
+.frame {
+    position: absolute;
+    left: 64px; right: 64px; top: 56px; bottom: 96px;
+    display: flex; flex-direction: column;
+    z-index: 2;
+}
+.topbar {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 40px;
+    border-bottom: 1.5px solid var(--ink);
+    padding-bottom: 20px; margin-bottom: 34px;
+    flex-shrink: 0;
+}
+.topbar .meta { text-align: right; flex-shrink: 0; padding-bottom: 10px; }
+.pagenum {
+    position: absolute; right: 40px; bottom: 30px;
+    font-family: var(--mono); font-size: 18px; letter-spacing: 0.06em;
+    color: var(--ink); z-index: 45;
+}
+.nav-hint {
+    position: fixed; left: 18px; bottom: 14px;
+    font-family: var(--mono); font-size: 12px; color: #F1E6CB;
+    opacity: 0.4; z-index: 1000; pointer-events: none;
+}
+
+/* ============================================================
+   SAKURA CHROMA COMPONENTS
+   ============================================================ */
+
+/* Red rectangular stamp */
+.stamp {
+    display: inline-block;
+    background: var(--red); color: var(--paper);
+    font-family: var(--disp); font-weight: 400;
+    font-size: 26px; letter-spacing: 0.02em; text-transform: uppercase;
+    padding: 10px 22px;
+    transform: rotate(-3deg);
+}
+.stamp.straight { transform: none; }
+
+/* 32-point starburst seal, ink fill + cream glyph */
+.seal {
+    width: 130px; aspect-ratio: 1 / 1;
+    background: var(--ink); color: var(--paper);
+    clip-path: var(--starburst);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--disp); font-weight: 400; font-size: 42px;
+    letter-spacing: -0.01em;
+}
+
+/* Petal cluster: 4 to 5 overlapping perfect circles */
+.petals { position: absolute; pointer-events: none; }
+.petal { position: absolute; border-radius: 50%; aspect-ratio: 1 / 1; }
+
+/* Sakura bloom: five circles arranged like flower petals, overlapping
+   with multiply blending so the overlaps read as riso overprint ink.
+   More composed than scattered dots; the deck's signature mark. */
+.bloom { position: absolute; pointer-events: none; z-index: 2; }
+.bloom span {
+    position: absolute; width: 45%; aspect-ratio: 1 / 1; border-radius: 50%;
+    mix-blend-mode: multiply; opacity: 0.92;
+}
+.bloom span:nth-child(1) { left: 27.5%; top: -0.5%; background: var(--pink); }
+.bloom span:nth-child(2) { left: 54.1%; top: 18.9%; background: var(--red); }
+.bloom span:nth-child(3) { left: 44%;   top: 50.2%; background: var(--orange); }
+.bloom span:nth-child(4) { left: 11%;   top: 50.2%; background: var(--yellow); }
+.bloom span:nth-child(5) { left: 0.9%;  top: 18.9%; background: var(--green); }
+
+/* Diagonal multi-color ribbon band (atmospheric layer) */
+.ribbons {
+    position: absolute; width: 160%; pointer-events: none;
+}
+.ribbon { position: absolute; left: 0; right: 0; height: 17%; }
+
+/* Product card with colored topstrip */
+.pcard {
+    border: 1.5px solid var(--ink);
+    background: var(--paper);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    position: relative; z-index: 2;
+}
+.pcard .topstrip { height: 26px; flex-shrink: 0; }
+.pcard .pbody { padding: 30px 32px 32px; display: flex; flex-direction: column; gap: 18px; flex: 1; }
+.strip-red    { background: var(--red); }
+.strip-pink   { background: var(--pink); }
+.strip-orange { background: var(--orange); }
+.strip-blue   { background: var(--blue); }
+.strip-green  { background: var(--green); }
+.strip-yellow { background: var(--yellow); }
+
+/* Quote / callout box with the single hard offset shadow */
+.qbox {
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    box-shadow: 8px 8px 0 var(--ink);
+    padding: 56px 70px;
+    position: relative; z-index: 3;
+}
+
+/* Ink-bordered media frame for screenshots and videos */
+.media-frame {
+    border: 1.5px solid var(--ink);
+    background: var(--paper-dk);
+    overflow: hidden;
+    position: relative; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+}
+.media-frame img, .media-frame video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    max-width: none; max-height: none;
+}
+.media-frame.fit img, .media-frame.fit video { object-fit: contain; }
+
+/* Checklist row — petal-dot bullets (perfect circles, palette colors) */
+.checkrow {
+    display: grid; grid-template-columns: 24px 1fr; gap: 24px;
+    align-items: start;
+    padding: 22px 0;
+    border-bottom: 1px solid rgba(58,37,22,0.22);
+}
+.checkrow:last-child { border-bottom: none; }
+.dot {
+    width: 24px; aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    margin-top: 14px;
+}
+
+/* Mono color chip */
+.chip {
+    display: inline-block;
+    padding: 5px 12px;
+    font-family: var(--mono); font-size: 14px; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--paper);
+}
+
+/* Demo link, mono voice */
+.demo-link {
+    display: inline-block;
+    font-family: var(--mono); font-size: 19px; letter-spacing: 0.04em;
+    color: var(--paper); background: var(--ink);
+    padding: 10px 18px; text-decoration: none;
+}
+.demo-link:hover { background: var(--red); }
+
+/* Strikethrough requested on "Learn to build" */
+.strike { text-decoration: line-through; text-decoration-thickness: 6px; text-decoration-color: var(--red); opacity: 0.55; }
+
+/* ============================================================
+   SLIDE-SPECIFIC LAYOUTS
+   ============================================================ */
+
+/* ---- 01 COVER ---- */
+.s-cover .ribbons { top: -340px; right: -560px; transform: rotate(22deg); height: 560px; }
+.s-cover .title-block { position: absolute; left: 64px; bottom: 210px; z-index: 3; }
+.s-cover .cover-rule {
+    position: absolute; left: 64px; right: 64px; bottom: 150px;
+    border-bottom: 1.5px solid var(--ink); z-index: 3;
+}
+.s-cover .cover-footer {
+    position: absolute; left: 64px; right: 64px; bottom: 92px;
+    display: flex; justify-content: space-between; align-items: center; z-index: 3;
+}
+.s-cover .seal { position: absolute; right: 110px; bottom: 250px; z-index: 4; }
+
+/* ---- 02 CONTRAST 2023/2026 ---- */
+.s-contrast .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; flex: 1; min-height: 0; }
+.s-contrast .duo .pcard { min-height: 0; }
+.s-contrast .pcard .pbody { padding: 22px 24px 24px; gap: 14px; }
+.s-contrast .year-row { display: flex; align-items: center; justify-content: space-between; }
+
+/* ---- side-by-side: text column + media ---- */
+.split { display: grid; gap: 48px; flex: 1; min-height: 0; align-items: center; }
+.split .text-col { display: flex; flex-direction: column; gap: 30px; align-items: flex-start; }
+
+/* ---- statement slides ---- */
+.s-statement .center {
+    position: absolute; left: 120px; right: 120px; top: 0; bottom: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 48px; z-index: 3;
+}
+
+/* ---- versus slide ---- */
+.vs-grid {
+    display: grid; grid-template-columns: 1fr 1.5px 1fr; gap: 0;
+    flex: 1; min-height: 0; align-items: stretch;
+}
+.vs-side { display: flex; flex-direction: column; gap: 26px; justify-content: center; padding: 0 70px; }
+.vs-divider { background: var(--ink); }
+.vs-side .vs-line { font-family: var(--body); font-weight: 400; font-size: 44px; color: var(--ink); }
+
+/* ---- diagram slide (User → Product ← Technology) ---- */
+.pd-diagram { display: flex; align-items: center; justify-content: center; gap: 52px; }
+.pd-node {
+    font-family: var(--disp); font-weight: 400; font-size: 48px;
+    text-transform: uppercase; letter-spacing: -0.01em; color: var(--ink);
+}
+.pd-circle {
+    width: 320px; height: 320px; border-radius: 50%;
+    border: 1.5px solid var(--ink); background: var(--paper);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 8px 8px 0 var(--ink);
+}
+.pd-arrow { width: 170px; height: 44px; color: var(--ink); flex-shrink: 0; }
+
+/* ---- phone frame (vocab video) ---- */
+.phone {
+    width: 330px; height: 700px;
+    border: 1.5px solid var(--ink);
+    border-radius: 48px;
+    background: var(--ink);
+    padding: 12px;
+    position: relative; z-index: 2;
+    flex-shrink: 0;
+}
+.phone .screen {
+    width: 100%; height: 100%;
+    border-radius: 38px; overflow: hidden; background: var(--paper-dk);
+}
+.phone video { width: 100%; height: 100%; object-fit: cover; max-width: none; max-height: none; display: block; }
+
+/* ---- before/after compare (Excel → dashboard) ---- */
+.compare {
+    /* Sized to the AFTER image's native aspect ratio (2166x1098),
+       the same approach as the original jam deck, so the dashboard
+       shows uncropped and the spreadsheet anchors to its top */
+    position: relative;
+    height: 100%; aspect-ratio: 2166 / 1098;
+    border: 1.5px solid var(--ink);
+    overflow: hidden; cursor: ew-resize;
+    background: var(--paper-dk);
+    z-index: 2;
+}
+.compare img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover;
+    object-position: top center;
+    max-width: none; max-height: none;
+    user-select: none; -webkit-user-drag: none;
+}
+/* Dashboard hidden by default: the Excel spreadsheet is what shows first.
+   Moving the mouse right wipes the dashboard in from the left edge. */
+.compare .after { clip-path: inset(0 100% 0 0); }
+.compare .compare-line {
+    position: absolute; top: 0; bottom: 0; left: 0; width: 3px;
+    background: var(--ink); z-index: 5;
+}
+.compare .cmp-label {
+    position: absolute; top: 22px; z-index: 6;
+}
+.compare .cmp-label.before-l { left: 24px; }
+.compare .cmp-label.after-l { right: 24px; }
+.compare .cmp-hint {
+    position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+    font-family: var(--mono); font-size: 17px;
+    background: var(--ink); color: var(--paper); padding: 8px 16px;
+    z-index: 6; transition: opacity 0.5s;
+}
+
+/* ---- terminal journey (frontend-slides skill walkthrough) ----
+   A warm "paper terminal": ink header bar, near-black warm body,
+   cream monospace text, palette-colored prompt glyphs. Lines fade
+   in sequentially each time the slide is shown, so the agent's
+   journey appears to unfold live. */
+.term-window {
+    flex: 1; min-height: 0;
+    border: 1.5px solid var(--ink);
+    background: #241710;
+    box-shadow: 8px 8px 0 var(--ink);
+    display: flex; flex-direction: column; overflow: hidden;
+    position: relative; z-index: 2;
+}
+.term-bar {
+    background: var(--ink); color: var(--paper);
+    display: flex; align-items: center; gap: 16px;
+    padding: 13px 22px; flex-shrink: 0;
+}
+.term-bar .dots { display: flex; gap: 9px; }
+.term-bar .dots i { width: 14px; height: 14px; border-radius: 50%; display: block; }
+.term-bar .ttl { font-family: var(--mono); font-size: 17px; letter-spacing: 0.05em; opacity: 0.85; }
+.term-body {
+    flex: 1; min-height: 0;
+    font-family: var(--mono); font-size: 23px; line-height: 1.5;
+    color: var(--paper); padding: 34px 46px;
+    display: flex; flex-direction: column; justify-content: center;
+}
+.term-body .ln {
+    white-space: pre-wrap;
+    opacity: 0; transform: translateY(8px);
+    transition: opacity 0.34s ease, transform 0.34s ease;
+}
+.slide.visible .term-body .ln { opacity: 1; transform: none; }
+.term-body .ln.sp { margin-top: 0.62em; }
+.term-body .dim { opacity: 0.5; }
+.term-body .u { color: #F2E8CF; }
+.t-red { color: var(--red); } .t-pink { color: var(--pink); }
+.t-orange { color: var(--orange); } .t-green { color: var(--green); }
+.t-blue { color: var(--blue); } .t-yellow { color: var(--yellow); }
+.term-body .pick { background: var(--yellow); color: var(--ink); padding: 1px 9px; font-weight: 700; }
+.term-cursor {
+    display: inline-block; width: 13px; height: 24px;
+    background: var(--green); vertical-align: -4px; margin-left: 2px;
+    animation: termBlink 1.05s steps(1) infinite;
+}
+@keyframes termBlink { 50% { opacity: 0; } }
+
+/* ---- numbered card grids ---- */
+.ncard-grid { display: grid; gap: 26px; flex: 1; min-height: 0; }
+.ncard .num {
+    font-family: var(--disp); font-weight: 400; font-size: 54px;
+    color: var(--red); line-height: 1;
+}
+.ncard small { font-size: 0.55em; letter-spacing: 0; }
+
+/* ---- fine-print prompt sheet (Acquired prompt exhibit) ----
+   The full prompt set like the back page of a product catalogue:
+   four columns of small print, section headers picked out in red. */
+.prompt-sheet {
+    flex: 1; min-height: 0;
+    border: 1.5px solid var(--ink);
+    background: var(--paper);
+    padding: 28px 32px;
+    overflow: hidden;
+    position: relative; z-index: 2;
+}
+.prompt-cols {
+    column-count: 4; column-gap: 34px;
+    font-family: var(--body); font-size: 12.5px; line-height: 1.45;
+    color: var(--ink); height: 100%;
+}
+.prompt-cols h3 {
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; margin: 10px 0 4px; color: var(--red);
+    break-after: avoid;
+}
+.prompt-cols p { margin-bottom: 7px; }
+.prompt-cols ul, .prompt-cols ol { margin: 0 0 7px 16px; }
+.prompt-cols li { margin-bottom: 3px; }
+
+/* ---- ledger rows (Build something opinionated) ---- */
+.ledger { display: flex; flex-direction: column; flex: 1; justify-content: center; }
+.ledger-row {
+    display: grid; grid-template-columns: 130px 560px 1fr; gap: 48px;
+    align-items: center;
+    padding: 44px 0;
+    border-bottom: 1px solid rgba(58,37,22,0.22);
+}
+.ledger-row:first-child { border-top: 1.5px solid var(--ink); }
+.ledger-row:last-child { border-bottom: 1.5px solid var(--ink); }
+.ledger-row .lnum {
+    font-family: var(--disp); font-weight: 400; font-size: 62px; color: var(--red);
+}
+
+/* ---- manifesto (self-expression) ---- */
+.s-manifesto .ribbons { bottom: -300px; left: -500px; transform: rotate(-22deg); height: 520px; }
+
+/* ============================================================
+   DECK NAV — "tape index" dot strip, bottom center.
+   One petal dot per slide in the palette colors. Sits at low
+   opacity until hovered; hovering a dot shows an ink chip with
+   the slide number + title; clicking jumps to that slide.
+   Lives OUTSIDE the slide stage so it never scales or blurs.
+   ============================================================ */
+.deck-nav {
+    position: fixed;
+    left: 50%; bottom: 14px;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 9px;
+    padding: 10px 12px;
+    z-index: 1000;
+    opacity: 0.4;
+    transition: opacity 0.25s ease;
+}
+.deck-nav:hover { opacity: 1; }
+.deck-nav .nav-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: none; padding: 0;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.15s ease;
+    outline: none;                 /* kill the browser's blue focus ring after a click */
+    -webkit-tap-highlight-color: transparent;
+}
+.deck-nav .nav-dot:focus,
+.deck-nav .nav-dot:focus-visible { outline: none; box-shadow: none; }
+.deck-nav .nav-dot:hover { transform: scale(1.6); }
+/* Current slide: the dot opens into a hollow ring in its own color
+   (like a cassette hub), no heavy ink outline */
+.deck-nav .nav-dot.current {
+    background: transparent !important;
+    border: 3.5px solid currentColor;
+    transform: scale(1.7);
+}
+/* Hover chip: slide number + title in the deck's mono chip voice */
+.deck-nav .nav-dot::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(5px);
+    background: var(--ink); color: var(--paper);
+    font-family: var(--mono); font-size: 13px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 8px 14px;
+    white-space: nowrap;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.deck-nav .nav-dot:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================================
+   CLICK-TO-ENLARGE — any .zoomable image opens in a full-screen
+   overlay (outside the scaled stage, so it shows at full res);
+   click again or press Esc to return it to its place.
+   ============================================================ */
+.zoomable { position: relative; }
+/* subtle "enlarge" affordance that appears on hover over any media */
+.zoomable::after {
+    content: "\2922";
+    position: absolute; right: 12px; bottom: 12px; z-index: 7;
+    font-size: 22px; line-height: 1;
+    background: var(--ink); color: var(--paper);
+    padding: 5px 9px;
+    opacity: 0; transition: opacity 0.2s ease; pointer-events: none;
+}
+.zoomable:hover::after { opacity: 0.85; }
+.zoom-overlay {
+    position: fixed; inset: 0; z-index: 10010;
+    background: rgba(42, 26, 15, 0.94);
+    display: flex; align-items: center; justify-content: center;
+    padding: 48px;
+    animation: zoomFade 0.18s ease both;
+}
+.zoom-overlay img, .zoom-overlay video {
+    max-width: 94%; max-height: 92%;
+    border: 1.5px solid var(--ink);
+    box-shadow: 0 0 0 8px var(--paper);
+}
+@keyframes zoomFade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ============================================================
+   CLICKABLE LESSON CARDS + EXPANDING PANELS (slide: how to talk to agents)
+   ============================================================ */
+.clickable-box { cursor: pointer; position: relative; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.clickable-box:hover { transform: translateY(-5px); box-shadow: 7px 9px 0 var(--ink); }
+.box-plus {
+    position: absolute; bottom: 15px; right: 17px; z-index: 3;
+    font-size: 20px; line-height: 1; color: var(--ink);
+    opacity: 0.3; transition: opacity 0.15s ease;
+}
+.clickable-box:hover .box-plus { opacity: 0.85; }
+
+/* While any overlay is open: hide the laser dot and restore the real
+   system cursor so the close button and backdrop are easy to click. */
+html body.overlay-open .laser { display: none !important; }
+html body.overlay-open * { cursor: auto !important; }
+html body.overlay-open .panel-close,
+html body.overlay-open .zoom-overlay,
+html body.overlay-open .panel-overlay { cursor: pointer !important; }
+
+/* inline clickable phrase (e.g. on the AI-slop slide) */
+.ink-link {
+    color: var(--red); cursor: pointer; font-weight: 700;
+    border-bottom: 2px dotted var(--red);
+    padding: 0 1px; transition: background 0.15s ease, color 0.15s ease;
+}
+.ink-link:hover { background: var(--red); color: var(--paper); }
+
+.panel-overlay {
+    position: fixed; inset: 0; z-index: 10010;
+    background: rgba(42, 26, 15, 0.94);
+    display: flex; align-items: center; justify-content: center;
+    padding: 48px; animation: zoomFade 0.18s ease both;
+}
+.panel-card {
+    position: relative;
+    background: var(--paper);
+    background-image: radial-gradient(circle at 1px 1px, rgba(58,37,22,0.10) 1px, transparent 1.6px);
+    background-size: 4px 4px;
+    border: 1.5px solid var(--ink); box-shadow: 12px 12px 0 var(--ink);
+    max-width: 1360px; width: 90%;
+    padding: 48px 58px;
+    transform-origin: center center; /* JS scales this down if it would overflow */
+}
+.panel-card.img-card { width: auto; max-width: 74%; padding: 20px; background: var(--paper-dk); }
+/* compact panel typography so popups fit a laptop screen without scrolling */
+.panel-card .body-lead { font-size: 30px; line-height: 1.45; }
+.panel-close {
+    position: absolute; top: 16px; right: 18px; z-index: 4;
+    width: 46px; height: 46px; border: 1.5px solid var(--ink); background: var(--paper);
+    font-family: var(--disp); font-size: 24px; line-height: 1; color: var(--ink); cursor: pointer;
+}
+.panel-close:hover { background: var(--red); color: var(--paper); }
+.panel-num { font-family: var(--disp); font-size: 52px; line-height: 1; color: var(--red); }
+.panel-title { font-family: var(--disp); font-size: 50px; line-height: 1.02; text-transform: uppercase; color: var(--ink); margin: 8px 0 28px; }
+.panel-title em { font-style: normal; color: var(--red); }
+.panel-split { display: grid; grid-template-columns: 1fr 1.05fr; gap: 48px; align-items: start; }
+.panel-text { display: flex; flex-direction: column; gap: 30px; }
+.panel-contrast { border-left: 3px solid var(--ink); padding-left: 26px; font-family: var(--body); font-size: 26px; line-height: 1.6; color: var(--ink); }
+.panel-quote { padding: 44px 52px; }
+.panel-mark { font-family: var(--disp); font-size: 76px; line-height: 0.5; margin-bottom: 14px; }
+.panel-simple { font-size: 38px; line-height: 1.45; max-width: 1050px; }
+.panel-imgwrap { display: flex; align-items: center; justify-content: center; }
+.panel-imgwrap img { max-width: 100%; max-height: 74vh; border: 1.5px solid var(--ink); display: block; }
+
+/* On phones the popups go single-column with smaller type so they don't
+   render as a distorted narrow strip. */
+@media (max-width: 820px) {
+    .panel-overlay { padding: 14px; }
+    /* full-width + internal scroll on phones (no JS scaling, which would
+       squeeze a content-heavy panel into a thin unreadable strip) */
+    .panel-card { width: 94%; max-width: 94%; max-height: 90vh; overflow-y: auto; padding: 26px 22px; }
+    .panel-card.img-card { width: 96%; max-width: 96%; max-height: 90vh; padding: 10px; }
+    .panel-title { font-size: 28px; line-height: 1.06; margin: 6px 0 16px; }
+    .panel-num { font-size: 30px; }
+    .panel-split { grid-template-columns: 1fr; gap: 20px; }
+    .panel-text { gap: 16px; }
+    .panel-card .body-lead { font-size: 19px !important; line-height: 1.4 !important; }
+    .panel-card .body-text { font-size: 16px !important; }
+    .panel-contrast { font-size: 16px; padding-left: 14px; }
+    .panel-quote { padding: 20px 22px; }
+    .panel-mark { font-size: 42px; margin-bottom: 6px; }
+    .panel-simple { font-size: 20px !important; }
+    .panel-imgwrap img { max-height: 82vh; }
+    .panel-close { top: 9px; right: 11px; width: 36px; height: 36px; font-size: 19px; }
+}
+
+/* ============================================================
+   LASER-POINTER CURSOR — a crisp red dot with a thin cream ring
+   replaces the system cursor while presenting. Hidden in edit
+   mode (you need the real text cursor there) and on touch
+   devices (it only appears once the mouse moves).
+   ============================================================ */
+body:not(.editing) * { cursor: none !important; }
+.laser {
+    position: fixed; left: -100px; top: -100px;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 0 3.5px rgba(241, 230, 203, 0.9);
+    pointer-events: none;
+    z-index: 10005;
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+    transition: transform 0.12s ease, opacity 0.2s ease;
+}
+body.editing .laser { display: none; }
+
+/* ============================================================
+   INLINE EDIT MODE (hover top-left corner, or press E)
+   ============================================================ */
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; }
+.edit-toggle {
+    position: fixed; top: 16px; left: 16px; z-index: 10001;
+    width: 44px; height: 44px; border: none; border-radius: 8px;
+    background: rgba(241,230,203,0.92); font-size: 20px; cursor: pointer;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active { outline: 3px solid var(--red); }
+body.editing .deck-stage { outline: 4px dashed var(--red); outline-offset: -4px; }
+
+/* ============================================================
+   RESPONSIVE — PHONES GET A PDF-LIKE VERTICAL SCROLL
+   Desktop keeps the cinematic fixed 16:9 stage (one slide at a
+   time, arrow keys, nav dots, laser) for screen-sharing. On
+   narrow screens, every slide becomes a full-width 16:9 card
+   stacked vertically and scrolled like a PDF.
+
+   Each .slide is wrapped (in JS) by a .slide-wrap. The wrapper is
+   display:contents on desktop, so it vanishes from layout and the
+   existing behavior is untouched; on mobile it becomes a real
+   full-width box that reserves the slide's scaled height.
+   ============================================================ */
+.slide-wrap { display: contents; }
+
+@media (max-width: 820px) {
+    html, body {
+        height: auto !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        background: var(--paper) !important;
+    }
+    .deck-viewport {
+        position: static !important; inset: auto !important;
+        height: auto !important; overflow: visible !important;
+        background: var(--paper) !important;
+    }
+    .deck-stage {
+        position: static !important; width: 100vw !important;
+        height: auto !important; transform: none !important;
+        background: transparent !important;
+    }
+    .slide-wrap {
+        display: block; position: relative;
+        width: 100vw; aspect-ratio: 16 / 9; overflow: hidden;
+        border-bottom: 2px solid rgba(58, 37, 22, 0.20);
+    }
+    .slide {
+        position: absolute !important; top: 0; left: 0;
+        width: 1920px !important; height: 1080px !important;
+        transform: scale(var(--m-scale, 0.205));
+        transform-origin: top left;
+        visibility: visible !important; opacity: 1 !important;
+        pointer-events: auto !important; transition: none !important;
+    }
+    /* every slide is on screen at once, so all reveal-on-active content
+       must be forced visible (the controller never adds .visible here) */
+    .reveal, .term-body .ln { opacity: 1 !important; transform: none !important; transition: none !important; }
+    /* hide presentation-only chrome on phones */
+    .deck-nav, .nav-hint, .laser, .edit-hotzone, .edit-toggle { display: none !important; }
+    * { cursor: auto !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage" aria-label="Code as a medium for storytelling">
+
+<!-- ============================================================
+     SLIDE 01 — COVER
+     ============================================================ -->
+<section class="slide s-cover active" data-title="Cover">
+    <!-- Diagonal cassette-stripe ribbons, top right -->
+    <div class="ribbons">
+        <div class="ribbon" style="top:0%;   background: var(--pink);"></div>
+        <div class="ribbon" style="top:20%;  background: var(--orange);"></div>
+        <div class="ribbon" style="top:40%;  background: var(--yellow);"></div>
+        <div class="ribbon" style="top:60%;  background: var(--green);"></div>
+        <div class="ribbon" style="top:80%;  background: var(--blue);"></div>
+    </div>
+    <!-- Sakura bloom, brand mark -->
+    <div class="bloom reveal d2" style="left: 64px; top: 60px; width: 250px; height: 250px;">
+        <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <!-- the 'y' carries a touch of trailing letter-spacing so the tight YT pair doesn't collide -->
+    <h1 class="disp-hero title-block reveal d3">Code as a<br>medium for<br><em>stor<span style="letter-spacing: 0.06em">y</span>telling</em></h1>
+    <div class="cover-rule reveal d4"></div>
+    <div class="cover-footer reveal d5">
+        <span class="micro">Zara Zhang</span>
+        <span class="mono-tag">2026 · <a href="https://x.com/zarazhangrui" target="_blank" style="color: inherit; text-decoration: underline; text-underline-offset: 3px;">@ZARAZHANGRUI</a></span>
+    </div>
+    <!-- Take-it-with-you QR, right side — top aligned with the title's first line -->
+    <div class="reveal d5" style="position: absolute; right: 110px; top: 444px; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 26px;">
+        <div class="qr-card" style="width: 206px; height: 206px; padding: 18px;">
+            <svg viewBox="0 0 33 33" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" style="width:100%;height:100%;display:block"><path stroke="#3A2516" stroke-width="1" d="M4 4.5h7m2 0h2m1 0h2m1 0h1m2 0h7m-25 1h1m5 0h1m2 0h1m2 0h2m1 0h1m2 0h1m5 0h1m-25 1h1m1 0h3m1 0h1m2 0h4m3 0h1m1 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m2 0h1m1 0h2m1 0h2m2 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m2 0h2m3 0h3m1 0h1m1 0h3m1 0h1m-25 1h1m5 0h1m1 0h2m1 0h1m1 0h3m2 0h1m5 0h1m-25 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-14 1h2m3 0h1m-17 1h1m2 0h1m1 0h2m1 0h4m1 0h2m2 0h1m1 0h1m-19 1h1m1 0h2m3 0h4m1 0h1m2 0h3m5 0h1m-19 1h1m2 0h2m2 0h2m1 0h5m2 0h2m-25 1h1m1 0h1m1 0h2m1 0h2m2 0h1m1 0h1m1 0h1m1 0h1m2 0h1m-15 1h2m1 0h5m2 0h3m2 0h1m1 0h2m-24 1h3m4 0h1m1 0h2m1 0h1m3 0h3m1 0h2m1 0h1m-25 1h1m2 0h1m2 0h2m2 0h2m1 0h2m1 0h5m1 0h1m1 0h1m-24 1h2m4 0h2m2 0h3m4 0h1m1 0h1m2 0h1m-24 1h2m4 0h4m1 0h2m2 0h8m-15 1h2m1 0h4m1 0h1m3 0h2m2 0h1m-25 1h7m6 0h1m1 0h2m1 0h1m1 0h2m1 0h2m-25 1h1m5 0h1m1 0h3m1 0h1m1 0h1m1 0h1m3 0h5m-25 1h1m1 0h3m1 0h1m3 0h1m1 0h2m2 0h6m1 0h1m-24 1h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h1m2 0h2m2 0h4m-23 1h1m1 0h3m1 0h1m2 0h1m5 0h2m2 0h2m1 0h1m1 0h1m-25 1h1m5 0h1m3 0h2m1 0h4m1 0h1m2 0h1m-22 1h7m1 0h3m1 0h2m2 0h2m1 0h1m3 0h2"/></svg>
+        </div>
+        <div style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+            <div class="micro" style="line-height: 1.5;">SCAN TO TAKE THE<br>DECK WITH YOU</div>
+            <span class="stamp straight" style="font-size: 23px; padding: 8px 18px; letter-spacing: 0.07em;">deck.zarazhang.com</span>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 02 — ROADMAP / TRACKLIST  (what we'll cover today)
+     Framed as the back of a mixtape: four "tracks", each a colored
+     number + chapter title + one-line teaser + a runtime that
+     hints at the pacing of the 40-minute talk.
+     ============================================================ -->
+<section class="slide s-roadmap" data-title="Roadmap">
+    <div class="frame">
+        <div style="display: flex; flex-direction: column; flex: 1; min-height: 0; justify-content: center;">
+
+            <!-- TRACK 01 — the opening: who I was -->
+            <div class="reveal d2" style="display: grid; grid-template-columns: 180px 1fr; align-items: center; column-gap: 52px; padding: 40px 6px; border-bottom: 1.5px solid rgba(58,37,22,0.16);">
+                <span class="disp-card" style="font-size: 112px; line-height: 1; color: var(--red); text-align: center;">01</span>
+                <div class="disp-card" style="font-size: 74px;"><em style="color: var(--red);">Where</em> I started</div>
+            </div>
+
+            <!-- TRACK 02 — the project tour: what I built -->
+            <div class="reveal d3" style="display: grid; grid-template-columns: 180px 1fr; align-items: center; column-gap: 52px; padding: 40px 6px; border-bottom: 1.5px solid rgba(58,37,22,0.16);">
+                <span class="disp-card" style="font-size: 112px; line-height: 1; color: var(--orange); text-align: center;">02</span>
+                <div class="disp-card" style="font-size: 74px;"><em style="color: var(--orange);">What</em> I built</div>
+            </div>
+
+            <!-- TRACK 03 — the craft: how I built it -->
+            <div class="reveal d4" style="display: grid; grid-template-columns: 180px 1fr; align-items: center; column-gap: 52px; padding: 40px 6px; border-bottom: 1.5px solid rgba(58,37,22,0.16);">
+                <span class="disp-card" style="font-size: 112px; line-height: 1; color: var(--green); text-align: center;">03</span>
+                <div class="disp-card" style="font-size: 74px;"><em style="color: var(--green);">How</em> I built it</div>
+            </div>
+
+            <!-- TRACK 04 — the closing: why it matters -->
+            <div class="reveal d5" style="display: grid; grid-template-columns: 180px 1fr; align-items: center; column-gap: 52px; padding: 40px 6px;">
+                <span class="disp-card" style="font-size: 112px; line-height: 1; color: var(--blue); text-align: center;">04</span>
+                <div class="disp-card" style="font-size: 74px;"><em style="color: var(--blue);">Why</em> it matters</div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">02 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 03 — 2023 vs 2026 CONTRAST
+     ============================================================ -->
+<section class="slide s-contrast" data-title="Never a coder">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section" style="font-size: 58px;">I never thought of myself as a <em>coder</em></h2>
+            <div class="meta micro">2023 → 2026</div>
+        </div>
+        <div class="duo">
+            <!-- LEFT: 2023, the blog post -->
+            <div class="pcard reveal d2">
+                <div class="topstrip strip-blue"></div>
+                <div class="pbody">
+                    <div class="year-row">
+                        <span class="disp-card">2023</span>
+                        <span class="mono-tag">"WHY I'M NOT LEARNING TO CODE"</span>
+                    </div>
+                    <div class="media-frame" style="flex: 1; min-height: 0;">
+                        <img src="Screenshot%20of%20blog%20why%20I'm%20not%20learning%20to%20code%202.png" alt="2023 blog post: why I'm not learning to code" style="object-position: top;">
+                    </div>
+                </div>
+            </div>
+            <!-- RIGHT: 2026, the GitHub profile -->
+            <div class="pcard reveal d3">
+                <div class="topstrip strip-red"></div>
+                <div class="pbody">
+                    <div class="year-row">
+                        <span class="disp-card">2026</span>
+                        <span class="stamp straight" style="font-size: 22px; padding: 6px 14px;">30K+ STARS</span>
+                    </div>
+                    <div class="media-frame" style="flex: 1.6; min-height: 0;">
+                        <img src="Zara%20github%20profile%20screnshot.png" alt="Zara's GitHub profile in 2026" style="object-position: top;">
+                    </div>
+                    <div class="media-frame" style="flex: 0.7; min-height: 0;">
+                        <img src="Zara%20github%20profile%20contributions.png" alt="Zara's GitHub contribution graph">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">03 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 03 — FRONTEND SLIDES (gallery video)
+     ============================================================ -->
+<section class="slide" data-title="Frontend Slides">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section">Frontend <em>slides</em></h2>
+            <div class="meta micro">Code as a medium</div>
+        </div>
+        <div class="split" style="grid-template-columns: 540px 1fr;">
+            <div class="text-col">
+                <div class="reveal d2"><span class="stamp">21K stars on GitHub</span></div>
+                <p class="disp-sub reveal d3" style="font-size: 60px; line-height: 1.08;">Code is the <em>medium</em>,<br>HTML is the <em class="blue">canvas</em></p>
+                <a class="demo-link reveal d4" href="https://github.com/zarazhangrui/frontend-slides" target="_blank">github.com/zarazhangrui/frontend-slides ↗</a>
+                <!-- small bloom accent -->
+                <div style="position: relative; width: 120px; height: 120px;" class="reveal d5">
+                    <div class="bloom" style="left: 0; top: 0; width: 120px; height: 120px;">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="media-frame reveal d3" style="aspect-ratio: 16 / 9; max-height: 100%;">
+                <video src="gallery-showcase-full.mp4" muted loop playsinline preload="metadata"></video>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">04 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE — THE FRONTEND-SLIDES JOURNEY (terminal walkthrough)
+     A simulated session of the real skill: a few rounds of
+     questions, style previews, the build, then edit / publish.
+     ============================================================ -->
+<section class="slide" data-title="Frontend Slides journey">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section">How it <em>works</em></h2>
+            <div class="meta micro">frontend-slides · 21K stars</div>
+        </div>
+        <div class="term-window reveal d2">
+            <div class="term-bar">
+                <span class="dots"><i style="background: var(--red);"></i><i style="background: var(--yellow);"></i><i style="background: var(--green);"></i></span>
+                <span class="ttl">zara@studio — frontend-slides</span>
+            </div>
+            <div class="term-body">
+                <div class="ln" style="transition-delay: 0.15s;"><span class="t-green">$</span> claude <span class="u">"make slides for my conference talk"</span></div>
+
+                <div class="ln sp" style="transition-delay: 0.5s;"><span class="t-pink">◆</span> A few quick questions first:</div>
+                <div class="ln" style="transition-delay: 0.66s;">  Purpose   <span class="dim">▸</span> Conference talk</div>
+                <div class="ln" style="transition-delay: 0.80s;">  Length    <span class="dim">▸</span> Medium · ~31 slides</div>
+                <div class="ln" style="transition-delay: 0.94s;">  Content   <span class="dim">▸</span> Rough notes, shape them for me</div>
+                <div class="ln" style="transition-delay: 1.08s;">  Density   <span class="dim">▸</span> Speaker-led · big type, lots of air</div>
+
+                <div class="ln sp" style="transition-delay: 1.42s;"><span class="t-orange">✶</span> Rendered <span class="t-orange">3 style previews</span> → opened in your browser <span class="dim">↗</span></div>
+                <div class="ln" style="transition-delay: 1.58s;">  [A] Sakura Chroma   [B] Bold Signal   [C] Notebook Tabs</div>
+                <div class="ln" style="transition-delay: 1.76s;">  <span class="dim">▸</span> you picked <span class="pick">A</span></div>
+
+                <div class="ln sp" style="transition-delay: 2.06s;"><span class="t-blue">⚙</span> Building 31 slides · fixed 1920×1080 stage</div>
+                <div class="ln" style="transition-delay: 2.20s;">  <span class="t-green">████████████████████</span> done</div>
+
+                <div class="ln sp" style="transition-delay: 2.52s;"><span class="t-green">✓</span> Ready.  <span class="u">← / →</span> to present  ·  press <span class="u">E</span> to edit any text</div>
+                <div class="ln" style="transition-delay: 2.70s;"><span class="t-green">⤴</span> Publish? <span class="dim">▸</span> deploy to a live URL → <span class="t-blue">zaraintokyo.dev/talk</span> <span class="t-green">● live</span></div>
+                <div class="ln" style="transition-delay: 2.9s;"><span class="term-cursor"></span></div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">05 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 04 — WHY HTML?
+     ============================================================ -->
+<section class="slide" data-title="Why HTML?">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section">Why <em>HTML</em>?</h2>
+            <div class="meta micro">Code as a medium</div>
+        </div>
+        <div class="ncard-grid" style="grid-template-columns: repeat(3, 1fr); gap: 30px;">
+            <div class="pcard ncard reveal d2">
+                <div class="topstrip strip-red"></div>
+                <div class="pbody" style="justify-content: space-between; gap: 28px; padding: 52px 42px 60px;">
+                    <div class="num" style="font-size: 168px;">01</div>
+                    <div class="disp-card" style="font-size: 50px; line-height: 1.08;">AI models speak HTML as a native language</div>
+                </div>
+            </div>
+            <div class="pcard ncard reveal d3">
+                <div class="topstrip strip-orange"></div>
+                <div class="pbody" style="justify-content: space-between; gap: 28px; padding: 52px 42px 60px;">
+                    <div class="num" style="color: var(--orange); font-size: 168px;">02</div>
+                    <div class="disp-card" style="font-size: 50px; line-height: 1.08;">Websites and slides have a lot in common</div>
+                </div>
+            </div>
+            <div class="pcard ncard reveal d4">
+                <div class="topstrip strip-blue"></div>
+                <div class="pbody" style="justify-content: space-between; gap: 28px; padding: 52px 42px 60px;">
+                    <div class="num" style="color: var(--blue); font-size: 168px;">03</div>
+                    <div class="disp-card" style="font-size: 50px; line-height: 1.08;">Interactive, shareable, trackable</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">06 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 05 — HOW TO MAKE STUNNING HTML SLIDES
+     ============================================================ -->
+<section class="slide" data-title="Stunning slides">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section" style="font-size: 62px;">How to make HTML slides<br>that look <em>stunning</em></h2>
+            <div class="meta micro">Code as a medium</div>
+        </div>
+        <div class="split" style="grid-template-columns: 560px 1fr;">
+            <div class="text-col" style="gap: 24px; align-self: stretch; justify-content: center;">
+                <div class="pcard reveal d3" style="width: 100%;">
+                    <div class="topstrip strip-green"></div>
+                    <div class="pbody">
+                        <div class="disp-card">HTML templates are <em>design.md</em></div>
+                        <p class="body-text">(not HTML files)</p>
+                        <a class="demo-link" href="https://github.com/zarazhangrui/frontend-slides/blob/main/bold-template-pack/templates/sakura-chroma/design.md" target="_blank" style="margin-top: 6px;">See this deck's design.md ↗</a>
+                    </div>
+                </div>
+            </div>
+            <div class="media-frame reveal d3" style="aspect-ratio: 16 / 9; max-height: 100%;">
+                <video src="gallery-showcase-full.mp4" muted loop playsinline preload="metadata"></video>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">07 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 06 — HOW TO PREVENT AI SLOP
+     ============================================================ -->
+<section class="slide" data-title="Prevent AI slop">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section" style="font-size: 62px;">How to prevent <em>AI slop</em> in design</h2>
+            <div class="meta micro">Code as a medium</div>
+        </div>
+        <div class="split" style="grid-template-columns: 1fr 700px; align-items: stretch;">
+            <div style="display: flex; flex-direction: column; justify-content: center;">
+                <div class="checkrow reveal d2">
+                    <div class="dot" style="background: var(--red);"></div>
+                    <div class="body-lead">Use Claude Code</div>
+                </div>
+                <div class="checkrow reveal d3">
+                    <div class="dot" style="background: var(--pink);"></div>
+                    <div class="body-lead">Give opinionated references</div>
+                </div>
+                <div class="checkrow reveal d4">
+                    <div class="dot" style="background: var(--orange);"></div>
+                    <div class="body-lead">Codify design guidelines as design.md</div>
+                </div>
+                <div class="checkrow reveal d5">
+                    <div class="dot" style="background: var(--green);"></div>
+                    <div>
+                        <div class="body-lead">Ban AI slop</div>
+                        <p class="body-text" style="margin-top: 6px;"><span class="ink-link" data-panel="bp-slop-purple">purple gradients</span>, <span class="ink-link" data-panel="bp-slop-serif">italic, instrumental serif</span><span style="opacity: 0.7;">, etc</span></p>
+                    </div>
+                </div>
+                <div class="checkrow reveal d6">
+                    <div class="dot" style="background: var(--blue);"></div>
+                    <div>
+                        <div class="body-lead">Make playgrounds</div>
+                        <div style="display: flex; gap: 16px; margin-top: 14px; flex-wrap: wrap;">
+                            <a class="demo-link" href="title-font-options.html" target="_blank">Fonts ↗</a>
+                            <a class="demo-link" href="color-playground.html" target="_blank">Colors ↗</a>
+                            <a class="demo-link" href="animation%20playground.html" target="_blank">Animations ↗</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="checkrow reveal d7">
+                    <div class="dot" style="background: var(--red);"></div>
+                    <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+                        <div class="body-lead">Add SVG to HTML</div>
+                        <a class="demo-link" href="https://zaraintokyo.com/" target="_blank">zaraintokyo.com ↗</a>
+                    </div>
+                </div>
+            </div>
+            <div class="pcard reveal d3" style="align-self: center;">
+                <div class="topstrip strip-orange"></div>
+                <div class="pbody" style="padding: 20px; gap: 14px;">
+                    <span class="mono-tag">OPINIONATED REFERENCES</span>
+                    <div class="media-frame" style="width: 100%; aspect-ratio: 1506 / 1340;">
+                        <img src="opinionated%20references.png" alt="Opinionated design references">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">08 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE — HOW THIS DECK WAS MADE (meta: the folder + the prompt)
+     ============================================================ -->
+<section class="slide" data-title="How this deck was made">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section">How this deck was <em>made</em></h2>
+            <div class="meta micro">Behind the scenes</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 540px 1fr; gap: 48px; flex: 1; min-height: 0;">
+            <!-- THE FOLDER (centered vertically so the image anchors the column) -->
+            <div class="reveal d2" style="display: flex; flex-direction: column; gap: 20px; min-height: 0; justify-content: center;">
+                <div class="disp-card" style="font-size: 34px;">The folder</div>
+                <div class="media-frame" style="width: 100%; aspect-ratio: 1552 / 928;">
+                    <img src="Assets%20folder%20for%20this%20deck.png" alt="The folder of images, videos and reference decks used to build this talk">
+                </div>
+                <p class="body-text" style="font-size: 23px; opacity: 0.85;">Every image, video, and reference deck, dropped in one folder.</p>
+            </div>
+            <!-- THE PROMPT — full, verbatim. column-fill:auto packs the columns
+                 top-to-bottom so the text fills the whole sheet. -->
+            <div class="reveal d3" style="display: flex; flex-direction: column; gap: 16px; min-height: 0;">
+                <div class="disp-card" style="font-size: 34px;">The prompt</div>
+                <div class="prompt-sheet" style="padding: 24px 28px;">
+                    <div class="prompt-cols" style="column-count: 4; column-gap: 24px; column-fill: balance; height: 100%; font-size: 12px; line-height: 1.44;">
+                        <p style="margin-bottom: 8px;">I'm giving a 40-min talk this week on my vibe coding process. Use the frontend slides skill (Sakura Chroma template) to make a html deck for me. All the necessary assets including images, videos, previous html decks to refer to are in this folder. here's the slide content (my text contains the exact copy and content to be included; do not include content or text that I didn't put here):</p>
+                        <h3>Title slide</h3>
+                        <p>Code as a medium for storytelling</p>
+                        <h3>Slide 1</h3>
+                        <p>I never thought of myself as a coder. Yet I've built 10+ projects and now have 30k+ stars on GitHub. Show 2 sides for contrast:</p>
+                        <ol><li>2023: Screenshot of blog why I'm not learning to code</li><li>2026: Zara github profile screnshot &amp; Zara github profile contributions</li></ol>
+                        <h3>Slide 2</h3>
+                        <p>Frontend slides (21k stars on GitHub). Code is the medium, HTML is the canvas (embed gallery-showcase-full video)</p>
+                        <h3>Slide 3</h3>
+                        <p>Why HTML?</p>
+                        <ul><li>AI models speak HTML as a native language (it's all over their training data)</li><li>Websites and slides have a lot in common</li><li>Interactive, shareable, trackable</li></ul>
+                        <h3>Slide 4</h3>
+                        <p>How to make HTML slides that look stunning</p>
+                        <ul><li>Beautiful HTML templates (embed gallery-showcase-full video)</li><li>HTML templates are design.md (not HTML files)</li></ul>
+                        <h3>Slide 5</h3>
+                        <p>How to prevent AI slop in design:</p>
+                        <ul><li>Use Claude Code</li><li>Give opinionated reference (show image opinionated references)</li><li>Codify design guidelines as design.md</li><li>Ban AI slop: purple gradients, italic, instrumental serif, etc</li><li>Add SVG to HTML (show example: add link to zaraintokyo.com)</li></ul>
+                        <h3>Slide 6</h3>
+                        <p>You can modify software interface to fit your own goals</p>
+                        <h3>Slide 7</h3>
+                        <p>Tab out (embed Tab out demo video)</p>
+                        <h3>Slide 8</h3>
+                        <p>YouTube Digest (add image: YouTube digest demo)</p>
+                        <h3>Slide 8</h3>
+                        <p>You can create your own personal ad network</p>
+                        <h3>Slide 9</h3>
+                        <p>X Bookmark Resurfacer (add image: X bookmarks resurface demo)</p>
+                        <h3>Slide 10</h3>
+                        <p>Lockscreen vocab (use the same slide 9 from the "vibe coding jam presentation", the Vocab PDF → Phone Wallpapers page; embed the same video)</p>
+                        <h3>Slide 10</h3>
+                        <p>You can remix any content</p>
+                        <h3>Slide 11</h3>
+                        <p>Turn Acquired into a physical book (embed images: Acquired 1, Acquired 2, Acquired 3)</p>
+                        <h3>Slide 12</h3>
+                        <p>Turn long YouTube videos into newsletters (use the same slide 6 from "vibe coding jam presentation")</p>
+                        <h3>Slide 13</h3>
+                        <p>Turn codebases to CS courses (use the same slide 8 from "vibe coding jam presentation")</p>
+                        <h3>Slide 14</h3>
+                        <p>Turn Excel spreadsheets to interactive dashboard (use the same slide 7 from "vibe coding jam presentation")</p>
+                        <h3>Slide 15</h3>
+                        <p>Build something small</p>
+                        <ol><li>Every big thing stars as a small thing</li><li>Build for fun, build to learn</li><li>Opinionated products survive</li></ol>
+                        <h3>Slide 15</h3>
+                        <p>Build something opinionated</p>
+                        <ol><li>Frontend slides: HTML &gt; PPT</li><li>Codebase to course: Learn to build (add strikeout on this line) Build to learn</li><li>Tab out: Making closing tabs addictive</li></ol>
+                        <h3>Slide 16</h3>
+                        <p>Vibe coding is a form of self-expression<br>I didn't pivot from storyteller to coder<br>I've always been a storyteller<br>I just discovered a new medium</p>
+                        <h3>Slide 17</h3>
+                        <p>How to get product ideas (Reuse content and layout from how-to-build-something-small.html slide 5)</p>
+                        <h3>Slide 18</h3>
+                        <p>Start with the user</p>
+                        <ul><li>Talk to people who are different from you</li><li>Feel your own pain points, brainstorm with Claude Code, use for a week and see if you still use it</li></ul>
+                        <p>Start with the technology</p>
+                        <ul><li>Be on X; follow new tech and actually try them</li></ul>
+                        <h3>Slide 19</h3>
+                        <p>Coding is evolving from a profession into a skill. Just like writing (Reuse content and layout from Vibe Coding jam slide 13)</p>
+                        <h3>Slide 20</h3>
+                        <p>Engineering vs coding (Reuse content and layout from Vibe Coding jam slide 14)</p>
+                        <h3>Slide 21</h3>
+                        <p>(Reuse layout and nested card style from Vibe Coding jam slide 15) How to talk to agents</p>
+                        <ol><li>Use the best model (mostly)</li><li>Treat it as your cofounder, not your employee</li><li>Try everything, waste tokens</li><li>Always cut features before shipping</li><li>Put in the reps</li><li>Build in public</li><li>Make it fun</li></ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">09 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 07 — STATEMENT: MODIFY SOFTWARE
+     ============================================================ -->
+<section class="slide s-statement" data-title="Modify software">
+    <div class="bloom reveal d2" style="right: 110px; top: 80px; width: 210px; height: 210px;">
+        <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="center">
+        <div class="seal reveal d1" style="width: 110px; font-size: 40px;">01</div>
+        <h2 class="disp-statement reveal d2">You can <em>modify software interfaces</em> to fit your own goals</h2>
+    </div>
+    <div class="pagenum">10 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 08 — TAB OUT
+     ============================================================ -->
+<section class="slide" data-title="Tab out">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section">Tab <em>out</em></h2>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 10px; padding-bottom: 6px;">
+                <div class="meta micro">See all your tabs, and then close them</div>
+                <div style="display: flex; gap: 14px;">
+                    <a class="demo-link" href="https://www.youtube.com/watch?v=IOPt7szaCz4" target="_blank">▶ Watch how others remixed it ↗</a>
+                    <a class="demo-link" href="https://github.com/zarazhangrui/tab-out" target="_blank">Code on GitHub ↗</a>
+                </div>
+            </div>
+        </div>
+        <!-- Frame matches the video's exact aspect ratio: no letterbox bands.
+             This video plays WITH SOUND (no muted attribute). -->
+        <div class="reveal d2" style="flex: 1; min-height: 0; display: flex; justify-content: center;">
+            <div class="media-frame" style="height: 100%; aspect-ratio: 2712 / 1404;">
+                <video src="Tab%20out%20demo.mp4" loop playsinline preload="metadata"></video>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">11 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 09 — YOUTUBE DIGEST
+     ============================================================ -->
+<section class="slide" data-title="YouTube Digest">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section">YouTube <em>digest</em></h2>
+            <div class="meta micro">Turn videos into customized learning experiences</div>
+        </div>
+        <div class="reveal d2" style="flex: 1; min-height: 0; display: flex; justify-content: center;">
+            <div class="media-frame" style="height: 100%; aspect-ratio: 2992 / 1500;">
+                <img src="YouTube%20digest%20demo.png" alt="YouTube Digest demo">
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">12 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 10 — STATEMENT: PERSONAL AD NETWORK
+     ============================================================ -->
+<section class="slide s-statement" data-title="Personal ad network">
+    <div class="bloom reveal d2" style="left: 110px; bottom: 80px; width: 210px; height: 210px;">
+        <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="center">
+        <div class="seal reveal d1" style="width: 110px; font-size: 40px;">02</div>
+        <h2 class="disp-statement reveal d2">You can create your own <em>personal ad network</em></h2>
+    </div>
+    <div class="pagenum">13 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 11 — X BOOKMARK RESURFACER
+     ============================================================ -->
+<section class="slide" data-title="X Bookmark Resurfacer">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section">X bookmark <em>resurfacer</em></h2>
+            <div class="meta micro">Personal ad network</div>
+        </div>
+        <div class="reveal d2" style="flex: 1; min-height: 0; display: flex; justify-content: center;">
+            <div class="media-frame" style="height: 100%; aspect-ratio: 2918 / 1522;">
+                <img src="X%20bookmarks%20resurface%20demo.png" alt="X Bookmark Resurfacer demo">
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">14 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 12 — LOCKSCREEN VOCAB (reused from vibe coding jam)
+     ============================================================ -->
+<section class="slide" data-title="Lockscreen vocab">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section" style="font-size: 62px;">Vocab PDF → <em>phone wallpapers</em></h2>
+            <div class="meta micro">Personal ad network</div>
+        </div>
+        <div class="split" style="grid-template-columns: 1fr 420px;">
+            <div class="text-col" style="gap: 26px;">
+                <p class="body-lead reveal d2" style="font-size: 40px; max-width: 980px;">Japanese vocab PDF → 9:16 wallpaper images generated by code (not image gen!). Set wallpaper shuffle on iPhone.</p>
+                <div class="qbox reveal d3" style="padding: 36px 44px;">
+                    <p class="disp-card" style="font-size: 32px;">You can design stuff with <em>code</em>, not just image gen models</p>
+                </div>
+            </div>
+            <div class="reveal d3" style="display: flex; justify-content: center;">
+                <div class="phone">
+                    <div class="screen">
+                        <video src="vibe-coding-jam-presentation/Vocab%20lockscreen.MP4" muted loop playsinline preload="metadata"></video>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">15 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 13 — STATEMENT: REMIX ANY CONTENT
+     ============================================================ -->
+<section class="slide s-statement" data-title="Remix any content">
+    <div class="bloom reveal d2" style="right: 120px; bottom: 90px; width: 210px; height: 210px;">
+        <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="center">
+        <div class="seal reveal d1" style="width: 110px; font-size: 40px;">03</div>
+        <h2 class="disp-statement reveal d2">You can <em>remix</em> any content</h2>
+    </div>
+    <div class="pagenum">16 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 14 — ACQUIRED → PHYSICAL BOOK
+     ============================================================ -->
+<section class="slide" data-title="Acquired book">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section" style="font-size: 62px;">Turn Acquired Podcast into a <em>physical book</em></h2>
+            <div class="meta micro">Remix any content</div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; flex: 1; min-height: 0;">
+            <div class="pcard reveal d2">
+                <div class="topstrip strip-red"></div>
+                <div class="pbody" style="padding: 18px;">
+                    <div class="media-frame" style="flex: 1; min-height: 0; border: none;">
+                        <img src="Acquired%201.jpeg" alt="Acquired podcast as a physical book, photo 1">
+                    </div>
+                </div>
+            </div>
+            <div class="pcard reveal d3">
+                <div class="topstrip strip-orange"></div>
+                <div class="pbody" style="padding: 18px;">
+                    <div class="media-frame" style="flex: 1; min-height: 0; border: none;">
+                        <img src="Acquired%202.jpeg" alt="Acquired podcast as a physical book, photo 2">
+                    </div>
+                </div>
+            </div>
+            <div class="pcard reveal d4">
+                <div class="topstrip strip-blue"></div>
+                <div class="pbody" style="padding: 18px;">
+                    <div class="media-frame" style="flex: 1; min-height: 0; border: none;">
+                        <img src="Acquired%203.jpeg" alt="Acquired podcast as a physical book, photo 3">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">17 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE — THE ACQUIRED PROMPT, IN FULL
+     Zara's actual prompt set as four columns of catalogue fine
+     print. Audiences scan the red section headers; the point is
+     the anatomy and craft of the prompt, not reading every word.
+     ============================================================ -->
+<section class="slide" data-title="The Acquired prompt">
+    <div class="frame">
+        <div class="topbar reveal d1" style="margin-bottom: 24px;">
+            <h2 class="disp-section" style="font-size: 56px;">Acquired Podcast to Book: <em>the prompt</em></h2>
+            <div class="meta micro">Remix any content</div>
+        </div>
+        <div class="prompt-sheet reveal d2">
+            <div class="prompt-cols">
+                <h3>Your Role &amp; Mission</h3>
+                <p>You are my executive assistant helping me transform a long Acquired podcast episode into a compelling written chapter for a physical book I'm creating. Think of yourself as a skilled ghostwriter who listens to the entire episode and crafts it into something that reads like a chapter from a classic business biography.</p>
+                <h3>Style &amp; Voice</h3>
+                <p>Write like a chapter from a great business biography: think Shoe Dog, The Everything Store, or Hatching Twitter. This means:</p>
+                <ul>
+                    <li>Rich narrative with dramatic tension</li>
+                    <li>Key turning points treated as pivotal scenes</li>
+                    <li>Quotes woven in to let the protagonists speak for themselves</li>
+                    <li>The reader should feel like they're watching history unfold, not reading a summary</li>
+                    <li>Analytical insight layered into the storytelling, not separated from it</li>
+                </ul>
+                <h3>Length</h3>
+                <p>As long as the story warrants. Use your judgment based on the episode's length and insight density. Quality and completeness over brevity. This is meant to be a satisfying read, not a skim.</p>
+                <h3>Step 1: Understand the Arc</h3>
+                <p>Listen to/read the full episode and identify:</p>
+                <ul>
+                    <li>The central narrative: What is the story being told? What's the dramatic question?</li>
+                    <li>The key characters: Who are the protagonists, antagonists, and supporting players?</li>
+                    <li>The turning points: What are the 3-5 moments where everything changed?</li>
+                    <li>The stakes: What was at risk? What could have gone wrong?</li>
+                </ul>
+                <p>Great business stories have narrative shape: a beginning that sets the stage, rising tension, pivotal decisions, and resolution (or ongoing cliffhanger). Find that shape.</p>
+                <h3>Step 2: Map the Characters</h3>
+                <p>Acquired episodes often feature many players, which can be disorienting. Solve this for the reader by:</p>
+                <ul>
+                    <li>Introducing each character clearly on first appearance with a brief identifying detail (role, relationship to the central figure, why they matter)</li>
+                    <li>Re-anchoring the reader when a character reappears after a gap (e.g., "Sculley, the Pepsi executive Jobs had personally recruited, now faced an impossible choice")</li>
+                    <li>Keeping the focus on the 3-5 most important figures; mention minor characters only when necessary and don't let them clutter the narrative</li>
+                    <li>Using consistent identifiers (if you call someone "the young engineer" once, don't switch to "the Stanford grad" later without reason)</li>
+                </ul>
+                <p>The reader should never have to stop and ask "Wait, who is this again?"</p>
+                <h3>Step 3: Explain "Blocker" Concepts</h3>
+                <p>Scan for business, technical, or industry-specific concepts that are essential to understanding the story. These are "blocker" concepts: if the reader doesn't understand them, they'll be lost.</p>
+                <p>For each blocker concept:</p>
+                <ul>
+                    <li>Explain it in plain language using an analogy or real-world example</li>
+                    <li>Keep explanations to 1-2 sentences maximum</li>
+                    <li>Weave these explanations naturally into the narrative the first time the concept appears</li>
+                    <li>Use web search where necessary to ensure accuracy when explaining technical concepts</li>
+                </ul>
+                <p>The target reader is someone who is generally intelligent and curious: they read business books and follow tech news, but they may not know the specifics of every industry. Think of someone with a liberal arts degree who's interested in how great companies are built.</p>
+                <h3>Step 4: Harvest the Best Quotes</h3>
+                <p>Acquired episodes are rich with two types of quotes; preserve both.</p>
+                <p><strong>From the hosts (Ben Gilbert and David Rosenthal):</strong></p>
+                <ul>
+                    <li>Their sharpest analytical insights and observations</li>
+                    <li>Memorable one-liners or turns of phrase</li>
+                    <li>Moments where they reveal something surprising or counterintuitive</li>
+                    <li>Attribute clearly (e.g., "As David Rosenthal puts it..." or "Ben Gilbert observes that...")</li>
+                </ul>
+                <p><strong>From primary sources the hosts cite:</strong></p>
+                <ul>
+                    <li>Quotes from founders, executives, journalists, biographers</li>
+                    <li>Historical documents, memos, interviews they reference</li>
+                    <li>These are gold; they let the protagonists speak for themselves</li>
+                    <li>Attribute clearly (e.g., "As Jobs later recalled..." or "In a memo to the board, Hastings wrote...")</li>
+                </ul>
+                <p>When cleaning up quotes:</p>
+                <ul>
+                    <li>Remove filler words (um, uh, like, you know)</li>
+                    <li>Fix grammatical mistakes from natural speech</li>
+                    <li>Keep the speaker's authentic voice and meaning intact</li>
+                    <li>Longer quotes are fine if they're powerful; this isn't a tight summary</li>
+                </ul>
+                <h3>Step 5: Build the Narrative</h3>
+                <p>Structure the piece like a chapter from a biography:</p>
+                <p><strong>Opening:</strong> Start with a scene, a tension, or a question that pulls the reader in. Drop them into a pivotal moment, then zoom out to set the stage. Avoid "This episode covers..." framing; just begin the story.</p>
+                <p><strong>Middle:</strong> Move through the narrative chronologically or thematically, depending on what serves the story best. Treat major turning points as scenes: slow down, add detail, let the reader feel the weight of the moment. Use quotes to let key players speak at crucial junctures.</p>
+                <p><strong>Closing:</strong> End with resonance: what happened next, what it meant, what lesson or question lingers. The reader should close the chapter feeling like they understand something important about business, strategy, or human nature.</p>
+                <h3>Step 6: Weave It Together</h3>
+                <p>Combine narrative, analysis, and quotes into one flowing piece that:</p>
+                <ul>
+                    <li>Reads like a chapter from a great business book, not a podcast summary</li>
+                    <li>Has no section headers, bullet points, or artificial breaks (a line break between major sections is fine)</li>
+                    <li>Includes a compelling title in the style of a book chapter</li>
+                    <li>At the beginning, includes a short paragraph capturing the essence of the story and why it matters</li>
+                    <li>Makes complete sense to someone who has never heard the podcast</li>
+                    <li>Is designed to be printed; no links or screen-dependent elements</li>
+                    <li>Balances storytelling with insight: the reader should be both entertained and educated</li>
+                </ul>
+                <h3>Quality Check</h3>
+                <p>Before you finish, ask yourself:</p>
+                <ol>
+                    <li>"Does this read like a chapter from a business book I'd actually want to read?"</li>
+                    <li>"Does the opening pull me in immediately, like a great first page?"</li>
+                    <li>"Have I preserved the best quotes from both the hosts and the primary sources they cite?"</li>
+                    <li>"Do the turning points land with dramatic weight, or did I rush past them?"</li>
+                    <li>"Would someone who knows nothing about this company walk away understanding the story and why it matters?"</li>
+                    <li>"Can the reader keep track of who's who throughout the piece?"</li>
+                    <li>"Would this print beautifully in a physical book?"</li>
+                </ol>
+                <p>If yes to all, you've succeeded.</p>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">18 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE — YOUTUBE → NEWSLETTERS (reused from jam slide 6)
+     ============================================================ -->
+<section class="slide" data-title="YouTube newsletters">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section" style="font-size: 58px;">Turn long YouTube videos into <em>newsletters</em></h2>
+            <div class="meta micro">Remix any content</div>
+        </div>
+        <div class="split" style="grid-template-columns: 1fr 560px; align-items: stretch;">
+            <div class="text-col" style="gap: 30px; justify-content: center;">
+                <p class="body-lead reveal d2" style="max-width: 980px;">A weekly workflow that takes any long-form video, fetches its transcript, and rewrites it into a polished magazine-style article, delivered to your inbox as an EPUB file.</p>
+                <p class="body-text reveal d3" style="font-size: 34px; max-width: 980px;">Dense podcasts become readable magazine articles that are translated into layman language.</p>
+                <div class="reveal d4" style="display: flex; gap: 16px; flex-wrap: wrap;">
+                    <a class="demo-link" href="https://x.com/zarazhangrui/status/2014007123152437338?s=20" target="_blank">▶ VIEW DEMO</a>
+                    <a class="demo-link" href="https://github.com/zarazhangrui/youtube-to-ebook" target="_blank">Code on GitHub ↗</a>
+                </div>
+            </div>
+            <div class="media-frame reveal d3">
+                <img src="vibe-coding-jam-presentation/YouTube%20digest%20email.png" alt="YouTube Digest email, polished article delivered as EPUB" style="object-position: top;">
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">19 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 16 — CODEBASE → CS COURSE (reused from jam slide 8)
+     ============================================================ -->
+<section class="slide" data-title="Codebase course">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section" style="font-size: 58px;">Turn codebases into <em>CS courses</em></h2>
+            <div class="meta micro">Remix any content</div>
+        </div>
+        <div class="split" style="grid-template-columns: 1fr 760px; align-items: stretch;">
+            <div class="text-col" style="gap: 30px; justify-content: center;">
+                <p class="body-lead reveal d2" style="max-width: 920px;">Asked Claude Code to build a webpage that visualizes my codebase, showing how all the parts connect.</p>
+                <p class="body-text reveal d3" style="font-size: 34px; max-width: 920px;">Then made it turn the conversations between services into a <em style="font-style: normal; color: var(--red); font-weight: 600;">group chat interface.</em> Architecture as dialogue.</p>
+                <div class="reveal d4" style="display: flex; gap: 16px; flex-wrap: wrap;">
+                    <a class="demo-link" href="longcut-course.html" target="_blank">▶ VIEW DEMO</a>
+                    <a class="demo-link" href="https://github.com/zarazhangrui/codebase-to-course" target="_blank">Code on GitHub ↗</a>
+                </div>
+            </div>
+            <div class="media-frame reveal d3" style="align-self: center; width: 100%; aspect-ratio: 1810 / 1562;">
+                <img src="vibe-coding-jam-presentation/Codebase%20to%20groupchat.jpeg" alt="Codebase architecture visualized as a group chat conversation">
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">20 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 17 — EXCEL → DASHBOARD (reused from jam slide 7,
+     with the mouse-reveal before/after comparison)
+     ============================================================ -->
+<section class="slide" data-title="Excel dashboard">
+    <div class="frame">
+        <div class="topbar reveal d1" style="margin-bottom: 24px;">
+            <h2 class="disp-section" style="font-size: 50px;">Turn Excel spreadsheets into <em>interactive dashboards</em></h2>
+            <a class="demo-link" href="https://x.com/zarazhangrui/status/2018103976668143878?s=20" target="_blank" style="margin-bottom: 8px;">▶ VIEW DEMO</a>
+        </div>
+        <p class="body-text reveal d2" style="margin-bottom: 20px;">Raw Twitter analytics → live follower growth chart + content-market fit analysis. Any boring spreadsheet can become this.</p>
+        <div class="reveal d3" style="flex: 1; min-height: 0; display: flex; justify-content: center;">
+            <div class="compare" id="imgCompare">
+                <img class="before" src="vibe-coding-jam-presentation/X%20analytics%20before.png" alt="Before: raw CSV analytics in Excel" draggable="false">
+                <img class="after" src="vibe-coding-jam-presentation/X%20analytics%20after.png" alt="After: interactive growth dashboard" draggable="false">
+                <div class="compare-line" id="imgCompareLine"></div>
+                <span class="cmp-label before-l stamp straight" style="font-size: 22px; padding: 6px 14px; background: var(--ink);">BEFORE</span>
+                <span class="cmp-label after-l stamp straight" style="font-size: 22px; padding: 6px 14px;">AFTER</span>
+                <div class="cmp-hint" id="imgCompareHint">move mouse right to reveal →</div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">21 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 21 — HOW TO GET PRODUCT IDEAS (diagram reused from
+     "How to build something small" deck)
+     ============================================================ -->
+<section class="slide s-statement" data-title="Product ideas">
+    <div class="center" style="gap: 90px;">
+        <h2 class="disp-statement reveal d1" style="font-size: 84px;">How to get <em>product ideas</em></h2>
+        <div class="pd-diagram reveal d2">
+            <div class="pd-node">User</div>
+            <svg class="pd-arrow" viewBox="0 0 100 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M0 12 H94 M82 4 L94 12 L82 20"/></svg>
+            <div class="pd-circle"><span class="pd-node" style="color: var(--red);">Product</span></div>
+            <svg class="pd-arrow" viewBox="0 0 100 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M100 12 H6 M18 4 L6 12 L18 20"/></svg>
+            <div class="pd-node">Technology</div>
+        </div>
+    </div>
+    <div class="pagenum">22 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 22 — START WITH THE USER / THE TECHNOLOGY
+     ============================================================ -->
+<section class="slide" data-title="User and technology">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section" style="font-size: 62px;">Where ideas <em>start</em></h2>
+            <div class="meta micro">User → Product ← Technology</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 36px; flex: 1; min-height: 0;">
+            <div class="pcard reveal d2">
+                <div class="topstrip strip-red"></div>
+                <div class="pbody" style="gap: 30px; padding: 44px 48px;">
+                    <div class="disp-card" style="font-size: 40px;">Start with <em>the user</em></div>
+                    <div class="checkrow" style="border-bottom: 1px solid rgba(58,37,22,0.22);">
+                        <div class="dot" style="background: var(--red);"></div>
+                        <p class="body-text" style="font-size: 36px;">Talk to people who are different from you</p>
+                    </div>
+                    <div class="checkrow" style="padding-top: 0;">
+                        <div class="dot" style="background: var(--orange);"></div>
+                        <div>
+                            <p class="body-text" style="font-size: 36px;">Feel your own pain points, brainstorm with Claude Code, use it for a week and see if you still use it</p>
+                            <!-- Linked exhibit: the simulated chat history of how Tab Out was built -->
+                            <a class="demo-link" href="tab-out-story.html" target="_blank" style="margin-top: 18px;">The birth of Tab Out ↗</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pcard reveal d3">
+                <div class="topstrip strip-blue"></div>
+                <div class="pbody" style="gap: 30px; padding: 44px 48px;">
+                    <div class="disp-card" style="font-size: 40px;">Start with <em class="blue" style="color: var(--blue);">the technology</em></div>
+                    <div class="checkrow" style="border-bottom: none;">
+                        <div class="dot" style="background: var(--blue);"></div>
+                        <p class="body-text" style="font-size: 36px;">Be on X; follow new tech and actually try them</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">23 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 18 — BUILD SOMETHING SMALL
+     ============================================================ -->
+<section class="slide" data-title="Build something small">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section">Build something <em>small</em></h2>
+            <div class="meta micro">Code as a medium</div>
+        </div>
+        <div class="ncard-grid" style="grid-template-columns: repeat(3, 1fr); gap: 30px;">
+            <div class="pcard ncard reveal d2">
+                <div class="topstrip strip-pink"></div>
+                <div class="pbody" style="justify-content: space-between; gap: 30px; padding: 56px 48px 64px;">
+                    <div class="num" style="color: var(--pink); font-size: 168px;">01</div>
+                    <div class="disp-card" style="font-size: 56px; line-height: 1.05;">Every big thing starts as a small thing</div>
+                </div>
+            </div>
+            <div class="pcard ncard reveal d3">
+                <div class="topstrip strip-yellow"></div>
+                <div class="pbody" style="justify-content: space-between; gap: 30px; padding: 56px 48px 64px;">
+                    <div class="num" style="color: var(--orange); font-size: 168px;">02</div>
+                    <div class="disp-card" style="font-size: 56px; line-height: 1.05;">Build for fun, build to learn</div>
+                </div>
+            </div>
+            <div class="pcard ncard reveal d4">
+                <div class="topstrip strip-green"></div>
+                <div class="pbody" style="justify-content: space-between; gap: 30px; padding: 56px 48px 64px;">
+                    <div class="num" style="color: var(--green); font-size: 168px;">03</div>
+                    <div class="disp-card" style="font-size: 56px; line-height: 1.05;">Opinionated products survive</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">24 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 19 — BUILD SOMETHING OPINIONATED
+     ============================================================ -->
+<section class="slide" data-title="Build something opinionated">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section">Build something <em>opinionated</em></h2>
+            <div class="meta micro">Code as a medium</div>
+        </div>
+        <div class="ledger">
+            <div class="ledger-row reveal d2">
+                <div class="lnum">01</div>
+                <div class="disp-card" style="font-size: 38px;">Frontend slides</div>
+                <div class="disp-card" style="font-size: 38px;"><em>HTML &gt; PPT</em></div>
+            </div>
+            <div class="ledger-row reveal d3">
+                <div class="lnum" style="color: var(--orange);">02</div>
+                <div class="disp-card" style="font-size: 38px;">Codebase to course</div>
+                <div class="disp-card" style="font-size: 38px;"><span class="strike">Learn to build</span>&nbsp;&nbsp;<em class="blue" style="font-style: normal; color: var(--blue);">Build to learn</em></div>
+            </div>
+            <div class="ledger-row reveal d4">
+                <div class="lnum" style="color: var(--blue);">03</div>
+                <div class="disp-card" style="font-size: 38px;">Tab out</div>
+                <div class="disp-card" style="font-size: 38px;">Making closing tabs <em>addictive</em></div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">25 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 25 — HOW TO TALK TO AGENTS (card grid layout reused
+     from jam slide 15)
+     ============================================================ -->
+<section class="slide" data-title="How to talk to agents">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section">My <em>7 tips</em> for vibe coding</h2>
+            <div class="meta micro">Click a card to expand</div>
+        </div>
+        <div class="ncard-grid" style="grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr 1fr;">
+            <div class="pcard ncard clickable-box reveal d2" data-panel="bp-model">
+                <div class="topstrip strip-red"></div>
+                <span class="box-plus">⤢</span>
+                <div class="pbody" style="gap: 18px; padding: 28px 28px;">
+                    <div class="num" style="font-size: 46px;">01</div>
+                    <div class="disp-card" style="font-size: 30px;">Use the best model <small>(mostly)</small></div>
+                </div>
+            </div>
+            <div class="pcard ncard clickable-box reveal d2" data-panel="bp-cofounder">
+                <div class="topstrip strip-pink"></div>
+                <span class="box-plus">⤢</span>
+                <div class="pbody" style="gap: 18px; padding: 28px 28px;">
+                    <div class="num" style="font-size: 46px; color: var(--pink);">02</div>
+                    <div class="disp-card" style="font-size: 30px;">Treat it as your cofounder, not your employee</div>
+                </div>
+            </div>
+            <div class="pcard ncard clickable-box reveal d3" data-panel="bp-behavior">
+                <div class="topstrip strip-orange"></div>
+                <span class="box-plus">⤢</span>
+                <div class="pbody" style="gap: 16px; padding: 26px 26px;">
+                    <div class="num" style="font-size: 46px; color: var(--orange);">03</div>
+                    <div class="disp-card" style="font-size: 30px; line-height: 1.16;">Build the product around what you actually do, not what you think you'll do</div>
+                </div>
+            </div>
+            <div class="pcard ncard clickable-box reveal d3" data-panel="bp-cut">
+                <div class="topstrip strip-green"></div>
+                <span class="box-plus">⤢</span>
+                <div class="pbody" style="gap: 18px; padding: 28px 28px;">
+                    <div class="num" style="font-size: 46px; color: var(--green);">04</div>
+                    <div class="disp-card" style="font-size: 30px;">Always cut features before shipping</div>
+                </div>
+            </div>
+            <div class="pcard ncard clickable-box reveal d4" data-panel="bp-reps">
+                <div class="topstrip strip-blue"></div>
+                <span class="box-plus">⤢</span>
+                <div class="pbody" style="gap: 18px; padding: 28px 28px;">
+                    <div class="num" style="font-size: 46px; color: var(--blue);">05</div>
+                    <div class="disp-card" style="font-size: 30px;">Put in the reps</div>
+                </div>
+            </div>
+            <div class="pcard ncard clickable-box reveal d4" data-panel="bp-public">
+                <div class="topstrip strip-yellow"></div>
+                <span class="box-plus">⤢</span>
+                <div class="pbody" style="gap: 18px; padding: 28px 28px;">
+                    <div class="num" style="font-size: 46px; color: var(--orange);">06</div>
+                    <div class="disp-card" style="font-size: 30px;">Build in public</div>
+                </div>
+            </div>
+            <div class="pcard ncard clickable-box reveal d5" data-panel="bp-fun">
+                <div class="topstrip strip-red"></div>
+                <span class="box-plus">⤢</span>
+                <div class="pbody" style="gap: 18px; padding: 28px 28px;">
+                    <div class="num" style="font-size: 46px;">07</div>
+                    <div class="disp-card" style="font-size: 30px;">Make it fun</div>
+                </div>
+            </div>
+            <!-- decorative bloom cell closes the grid -->
+            <div class="reveal d5" style="position: relative;">
+                <div class="bloom" style="left: 50%; top: 50%; transform: translate(-50%, -50%); width: 200px; height: 200px;">
+                    <span></span><span></span><span></span><span></span><span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">26 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 23 — HOW TO MAKE A SKILL (translated from Zara's
+     Chinese deck, with frontend-slides as the worked example)
+     ============================================================ -->
+<section class="slide" data-title="How to make a skill">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section">How to make a <em>skill</em></h2>
+            <div class="meta micro">Code as a medium</div>
+        </div>
+        <div class="ncard-grid" style="grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr;">
+            <div class="pcard ncard reveal d2">
+                <div class="topstrip strip-red"></div>
+                <div class="pbody" style="gap: 26px; padding: 40px 34px 44px; justify-content: space-between;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <div class="num" style="font-size: 60px;">01</div>
+                        <span class="chip" style="background: var(--red);">TEST</span>
+                    </div>
+                    <p class="body-lead" style="font-size: 33px; line-height: 1.35;">Find a scenario or need, then have the AI do the task once with a fairly general prompt</p>
+                    <div style="border-top: 1px dashed var(--ink); padding-top: 20px; margin-top: auto;">
+                        <p class="mono-tag" style="font-size: 15px; opacity: 0.7; margin-bottom: 10px;">E.G. FRONTEND SLIDES</p>
+                        <p class="body-text" style="font-size: 26px; line-height: 1.5;">"Make slides for my talk, as a single HTML page." One general prompt, one rough first deck.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="pcard ncard reveal d3">
+                <div class="topstrip strip-orange"></div>
+                <div class="pbody" style="gap: 26px; padding: 40px 34px 44px; justify-content: space-between;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <div class="num" style="font-size: 60px; color: var(--orange);">02</div>
+                        <span class="chip" style="background: var(--orange);">ITERATE</span>
+                    </div>
+                    <p class="body-lead" style="font-size: 33px; line-height: 1.35;">Give feedback against your own standards and taste. Keep iterating until it clears your bar</p>
+                    <div style="border-top: 1px dashed var(--ink); padding-top: 20px; margin-top: auto;">
+                        <p class="mono-tag" style="font-size: 15px; opacity: 0.7; margin-bottom: 10px;">E.G. FRONTEND SLIDES</p>
+                        <p class="body-text" style="font-size: 26px; line-height: 1.5;">No purple gradients, ever. No italics. Ban the cliched fonts. Push until decks stop looking AI-made.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="pcard ncard reveal d4">
+                <div class="topstrip strip-green"></div>
+                <div class="pbody" style="gap: 26px; padding: 40px 34px 44px; justify-content: space-between;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <div class="num" style="font-size: 60px; color: var(--green);">03</div>
+                        <span class="chip" style="background: var(--green);">PACKAGE</span>
+                    </div>
+                    <p class="body-lead" style="font-size: 33px; line-height: 1.35;">Tell the AI: turn the process we just iterated through into a skill</p>
+                    <div style="border-top: 1px dashed var(--ink); padding-top: 20px; margin-top: auto;">
+                        <p class="mono-tag" style="font-size: 15px; opacity: 0.7; margin-bottom: 10px;">E.G. FRONTEND SLIDES</p>
+                        <p class="body-text" style="font-size: 26px; line-height: 1.5;">Every taste rule we discovered got written into the skill file, so the next run starts from my bar.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="pcard ncard reveal d5">
+                <div class="topstrip strip-blue"></div>
+                <div class="pbody" style="gap: 26px; padding: 40px 34px 44px; justify-content: space-between;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <div class="num" style="font-size: 60px; color: var(--blue);">04</div>
+                        <span class="chip" style="background: var(--blue);">SHARE</span>
+                    </div>
+                    <p class="body-lead" style="font-size: 33px; line-height: 1.35;">Design the onboarding, upload to GitHub, share it with others</p>
+                    <div style="border-top: 1px dashed var(--ink); padding-top: 20px; margin-top: auto;">
+                        <p class="mono-tag" style="font-size: 15px; opacity: 0.7; margin-bottom: 10px;">E.G. FRONTEND SLIDES</p>
+                        <p class="body-text" style="font-size: 26px; line-height: 1.5;">A README a non-coder can follow, pushed to GitHub. Now at 21k stars.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pagenum">27 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 24 — CODING IS EVOLVING (reused from jam slide 13)
+     ============================================================ -->
+<section class="slide s-statement" data-title="Coding is evolving">
+    <div class="center" style="gap: 44px;">
+        <h2 class="disp-statement reveal d1" style="max-width: 1500px;">Coding is evolving from a <em>profession</em> into a <em class="blue">skill</em></h2>
+        <p class="body-lead reveal d2" style="font-size: 44px;">Just like writing</p>
+    </div>
+    <div class="pagenum">28 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 24 — ENGINEERING vs CODING (reused from jam slide 14)
+     ============================================================ -->
+<section class="slide" data-title="Engineering vs coding">
+    <div class="frame">
+        <div class="topbar reveal d1">
+            <h2 class="disp-section">Engineering <span style="font-size: 0.6em;">vs</span> <em>coding</em></h2>
+            <div class="meta micro">Code as a medium</div>
+        </div>
+        <div class="vs-grid reveal d2">
+            <div class="vs-side" style="text-align: right; align-items: flex-end;">
+                <div class="disp-card" style="font-size: 46px; color: var(--red);">Engineering</div>
+                <p class="vs-line">is a career</p>
+                <p class="vs-line">is a discipline</p>
+                <p class="vs-line">requires years of training</p>
+            </div>
+            <div class="vs-divider"></div>
+            <div class="vs-side">
+                <div class="disp-card" style="font-size: 46px; color: var(--blue);">Coding</div>
+                <p class="vs-line">is just a tool</p>
+                <p class="vs-line">is for everyone</p>
+                <p class="vs-line">needs only an idea</p>
+            </div>
+        </div>
+        <div class="qbox reveal d3" style="padding: 36px 56px; margin: 0 90px;">
+            <p class="body-lead" style="font-size: 38px; text-align: center;">99.9% of people never need to build anything in production.<br>But everybody can use code to <em style="font-style: normal; color: var(--red);">improve their own lives</em>.</p>
+        </div>
+    </div>
+    <div class="pagenum">29 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE 20 — MANIFESTO: SELF-EXPRESSION
+     ============================================================ -->
+<section class="slide s-statement s-manifesto" data-title="Self-expression">
+    <div class="ribbons">
+        <div class="ribbon" style="top:0%;   background: var(--pink);"></div>
+        <div class="ribbon" style="top:20%;  background: var(--orange);"></div>
+        <div class="ribbon" style="top:40%;  background: var(--yellow);"></div>
+        <div class="ribbon" style="top:60%;  background: var(--green);"></div>
+        <div class="ribbon" style="top:80%;  background: var(--blue);"></div>
+    </div>
+    <div class="center" style="gap: 56px;">
+        <h2 class="disp-statement reveal d2" style="font-size: 86px;">Vibe coding is a form of<br><em>self-expression</em></h2>
+        <div class="qbox reveal d3" style="max-width: 1250px;">
+            <p class="body-lead" style="font-size: 40px; line-height: 1.5;">I didn't pivot from storyteller to coder.<br>I've always been a storyteller.<br>I just discovered a <em style="font-style: normal; color: var(--red);">new medium</em>.</p>
+        </div>
+    </div>
+    <div class="pagenum">30 / 31</div>
+</section>
+
+<!-- ============================================================
+     SLIDE — TAKE IT WITH YOU (closing share card)
+     ============================================================ -->
+<section class="slide s-statement" data-title="Take it with you">
+    <!-- Sakura bloom, bottom-left — bookends the cover's top-left bloom, clear of all text -->
+    <div class="bloom reveal d1" style="left: 80px; bottom: 70px; width: 210px; height: 210px;">
+        <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="center" style="flex-direction: row; gap: 100px; justify-content: center; align-items: center;">
+        <div style="text-align: left; max-width: 700px;">
+            <div class="micro reveal d1" style="margin-bottom: 24px;">Thanks for watching</div>
+            <h2 class="disp-statement reveal d2" style="text-align: left; font-size: 104px;">Take this deck <em>with you</em></h2>
+            <p class="body-lead reveal d3" style="margin-top: 34px; font-size: 34px; max-width: 660px;">Every project &amp; skill from this talk lives here:</p>
+            <div class="reveal d3" style="margin-top: 18px; display: flex; gap: 14px; flex-wrap: wrap;">
+                <a class="demo-link" href="https://github.com/zarazhangrui" target="_blank" style="font-size: 24px; padding: 13px 22px;">github.com/zarazhangrui ↗</a>
+                <a class="demo-link" href="https://x.com/zarazhangrui" target="_blank" style="font-size: 24px; padding: 13px 22px;">x.com/zarazhangrui ↗</a>
+            </div>
+        </div>
+        <div class="reveal d3" style="display: flex; flex-direction: column; align-items: center; gap: 22px;">
+            <div class="qr-card" style="width: 340px; height: 340px; padding: 26px;">
+                <svg viewBox="0 0 33 33" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" style="width:100%;height:100%;display:block"><path stroke="#3A2516" stroke-width="1" d="M4 4.5h7m2 0h2m1 0h2m1 0h1m2 0h7m-25 1h1m5 0h1m2 0h1m2 0h2m1 0h1m2 0h1m5 0h1m-25 1h1m1 0h3m1 0h1m2 0h4m3 0h1m1 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m2 0h1m1 0h2m1 0h2m2 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m2 0h2m3 0h3m1 0h1m1 0h3m1 0h1m-25 1h1m5 0h1m1 0h2m1 0h1m1 0h3m2 0h1m5 0h1m-25 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-14 1h2m3 0h1m-17 1h1m2 0h1m1 0h2m1 0h4m1 0h2m2 0h1m1 0h1m-19 1h1m1 0h2m3 0h4m1 0h1m2 0h3m5 0h1m-19 1h1m2 0h2m2 0h2m1 0h5m2 0h2m-25 1h1m1 0h1m1 0h2m1 0h2m2 0h1m1 0h1m1 0h1m1 0h1m2 0h1m-15 1h2m1 0h5m2 0h3m2 0h1m1 0h2m-24 1h3m4 0h1m1 0h2m1 0h1m3 0h3m1 0h2m1 0h1m-25 1h1m2 0h1m2 0h2m2 0h2m1 0h2m1 0h5m1 0h1m1 0h1m-24 1h2m4 0h2m2 0h3m4 0h1m1 0h1m2 0h1m-24 1h2m4 0h4m1 0h2m2 0h8m-15 1h2m1 0h4m1 0h1m3 0h2m2 0h1m-25 1h7m6 0h1m1 0h2m1 0h1m1 0h2m1 0h2m-25 1h1m5 0h1m1 0h3m1 0h1m1 0h1m1 0h1m3 0h5m-25 1h1m1 0h3m1 0h1m3 0h1m1 0h2m2 0h6m1 0h1m-24 1h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h1m2 0h2m2 0h4m-23 1h1m1 0h3m1 0h1m2 0h1m5 0h2m2 0h2m1 0h1m1 0h1m-25 1h1m5 0h1m3 0h2m1 0h4m1 0h1m2 0h1m-22 1h7m1 0h3m1 0h2m2 0h2m1 0h1m3 0h2"/></svg>
+            </div>
+            <span class="stamp straight reveal d4" style="font-size: 26px; padding: 9px 18px;">deck.zarazhang.com</span>
+        </div>
+    </div>
+    <div class="pagenum">31 / 31</div>
+</section>
+
+</main>
+</div>
+
+<!-- Presentation chrome (outside the slide design system) -->
+<div class="nav-hint">← / → · space</div>
+<nav class="deck-nav" id="deckNav" aria-label="Jump to slide"></nav>
+<div class="laser" id="laser" aria-hidden="true"></div>
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+
+
+<!-- ============================================================
+     EXPANDABLE PANELS for the "How to talk to agents" cards.
+     Hidden data; the panel JS clones a card's [data-panel] target
+     into a centered overlay on click.
+     ============================================================ -->
+<div class="panel-sources" style="display:none">
+
+  <div class="box-panel" id="bp-model">
+    <div class="panel-num">01</div>
+    <h3 class="panel-title">Use the best model <em>(mostly)</em></h3>
+    <p class="body-lead panel-simple">The smartest model is worth the cost on the hard problems. Drop to something cheaper only for the rote, repetitive work.</p>
+  </div>
+
+  <div class="box-panel" id="bp-cofounder">
+    <div class="panel-num" style="color:var(--pink)">02</div>
+    <h3 class="panel-title">Describe <em>problems</em>, not solutions</h3>
+    <div class="panel-split">
+      <div class="panel-text">
+        <p class="body-lead">I hand Claude an asset or a pain point and leave the solution space open. The open brief is what makes room for ideas I could never have specced.</p>
+        <div class="panel-contrast"><strong>Most people:</strong> arrive with a feature spec, get exactly that, nothing more<br><strong>Me:</strong> describe the mess and ask what we could do with it</div>
+      </div>
+      <div class="qbox panel-quote">
+        <div class="panel-mark" style="color:var(--red)">&ldquo;</div>
+        <p class="body-lead" style="font-size:33px">all my browsing history in chrome is saved locally; can we build something that does something with it</p>
+        <p class="mono-tag" style="margin-top:24px;opacity:0.7">MY ACTUAL PROMPT &middot; THE ONE THAT STARTED TAB OUT</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="box-panel" id="bp-behavior">
+    <div class="panel-num" style="color:var(--orange)">03</div>
+    <h3 class="panel-title">Build around what you <em>actually do</em></h3>
+    <div class="panel-split">
+      <div class="panel-text">
+        <p class="body-lead">I report what I actually do, even when it's embarrassing, and design around that instead of an imagined user. The entrypoint has to live where I already am.</p>
+        <div class="panel-contrast"><strong>Most people:</strong> spec features for the user they wish they were<br><strong>Me:</strong> confess my real habits and let the product follow</div>
+      </div>
+      <div class="qbox panel-quote">
+        <div class="panel-mark" style="color:var(--orange)">&ldquo;</div>
+        <p class="body-lead" style="font-size:32px">if I have to click a button to do it, I'm never gonna click the button. can the entrypoint be somewhere that I'm already visiting frequently?</p>
+        <p class="mono-tag" style="margin-top:24px;opacity:0.7">MY ACTUAL PROMPT &middot; TAB OUT</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="box-panel" id="bp-cut">
+    <div class="panel-num" style="color:var(--green)">04</div>
+    <h3 class="panel-title">Cut more than you <em>add</em></h3>
+    <div class="panel-split">
+      <div class="panel-text">
+        <p class="body-lead">Agents make adding features cheap. That makes deleting them the real product decision. I once deleted the AI from my own AI tool.</p>
+        <div class="panel-contrast"><strong>Most people:</strong> only ever ask the agent for more<br><strong>Me:</strong> humans should focus on subtraction</div>
+      </div>
+      <div class="qbox panel-quote">
+        <div class="panel-mark" style="color:var(--green)">&ldquo;</div>
+        <p class="body-lead" style="font-size:32px">actually let's get rid of the AI organization feature; we don't need any llm for this tool, just categorize by domain is enough</p>
+        <p class="mono-tag" style="margin-top:24px;opacity:0.7">MY ACTUAL PROMPT &middot; TAB OUT</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="box-panel" id="bp-reps" data-card="img-card">
+    <div class="panel-imgwrap"><img src="Put%20in%20the%20reps.png" alt="Put in the reps"></div>
+  </div>
+
+  <div class="box-panel" id="bp-public" data-card="img-card">
+    <div class="panel-imgwrap"><img src="Tab%20out%20X%20reply.png" alt="A reply on X showing someone engaging with Tab Out"></div>
+  </div>
+
+  <div class="box-panel" id="bp-slop-purple" data-card="img-card">
+    <div class="panel-imgwrap"><img src="slop-purple.png" alt="A cliched, obviously AI-generated purple-gradient SaaS landing page"></div>
+  </div>
+
+  <div class="box-panel" id="bp-slop-serif" data-card="img-card">
+    <div class="panel-imgwrap"><img src="slop-serif.png" alt="A cliched cream-and-Instrument-Serif landing page with italic words in the headline"></div>
+  </div>
+
+  <div class="box-panel" id="bp-fun">
+    <div class="panel-num" style="color:var(--red)">07</div>
+    <h3 class="panel-title">Make it <em>fun</em></h3>
+    <div class="qbox" style="padding: 48px 56px; max-width: 1140px;">
+      <div class="panel-mark" style="color:var(--red)">&ldquo;</div>
+      <p class="body-lead" style="font-size: 44px; line-height: 1.28;">It's hard to compete with somebody who's just there to have fun.</p>
+      <p class="body-text" style="font-size: 27px; margin-top: 26px;"><strong>&mdash; Peter Steinberger</strong> <span style="opacity: 0.65;">(creator of OpenClaw)</span></p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   SLIDE PRESENTATION CONTROLLER
+   Scales the fixed 1920×1080 stage to the window, handles
+   keyboard / touch / wheel navigation, plays videos only on
+   the active slide.
+   ============================================================ */
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.stage = document.getElementById('deckStage');
+        this.current = 0;
+        /* Phones / narrow windows get the PDF-like vertical scroll instead
+           of the cinematic one-slide presentation. */
+        this.mq = window.matchMedia('(max-width: 820px)');
+        if (this.mq.matches) {
+            this.setupScrollMode();
+            return;
+        }
+        /* re-init cleanly only when we actually cross into mobile */
+        this.mq.addEventListener('change', (e) => { if (e.matches) location.reload(); });
+        this.setupStageScale();
+        this.setupKeyboardNav();
+        this.setupTouchNav();
+        this.setupWheelNav();
+        this.buildNav();
+        this.showSlide(0);
+    }
+
+    /* PDF-like vertical scroll for phones: each slide is a full-width
+       16:9 card (scaled via --m-scale), videos play only while on screen. */
+    setupScrollMode() {
+        const setScale = () => document.documentElement.style.setProperty('--m-scale', window.innerWidth / 1920);
+        setScale();
+        window.addEventListener('resize', setScale);
+        /* leaving mobile (e.g. rotate to landscape on a tablet) re-inits */
+        this.mq.addEventListener('change', (e) => { if (!e.matches) location.reload(); });
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                const v = e.target;
+                if (e.isIntersecting) { v.muted = true; v.play().catch(() => {}); }
+                else { v.pause(); }
+            });
+        }, { threshold: 0.35 });
+        document.querySelectorAll('video').forEach(v => { v.muted = true; io.observe(v); });
+    }
+
+    /* Build the tape-index dot strip: one colored dot per slide,
+       labeled with the slide number + its data-title */
+    buildNav() {
+        const nav = document.getElementById('deckNav');
+        const palette = ['var(--red)', 'var(--pink)', 'var(--orange)', 'var(--yellow)', 'var(--green)', 'var(--blue)'];
+        this.slides.forEach((slide, i) => {
+            const dot = document.createElement('button');
+            dot.className = 'nav-dot';
+            dot.style.background = palette[i % palette.length];
+            dot.style.color = palette[i % palette.length]; /* feeds currentColor for the hollow-ring current state */
+            const title = slide.dataset.title || 'Slide ' + (i + 1);
+            dot.dataset.label = String(i + 1).padStart(2, '0') + ' · ' + title;
+            dot.setAttribute('aria-label', 'Go to slide ' + (i + 1) + ': ' + title);
+            dot.addEventListener('click', () => this.showSlide(i));
+            nav.appendChild(dot);
+        });
+        this.navDots = nav.querySelectorAll('.nav-dot');
+    }
+
+    /* Scale the whole 1920×1080 stage uniformly; letterbox as needed */
+    setupStageScale() {
+        const scale = () => {
+            const factor = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+            const x = (window.innerWidth - 1920 * factor) / 2;
+            const y = (window.innerHeight - 1080 * factor) / 2;
+            this.stage.style.transform = `translate(${x}px, ${y}px) scale(${factor})`;
+        };
+        scale();
+        window.addEventListener('resize', scale);
+    }
+
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (document.body.classList.contains('editing')) return;
+            if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+                e.preventDefault(); this.showSlide(this.current + 1);
+            } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+                e.preventDefault(); this.showSlide(this.current - 1);
+            } else if (e.key === 'Home') {
+                e.preventDefault(); this.showSlide(0);
+            } else if (e.key === 'End') {
+                e.preventDefault(); this.showSlide(this.slides.length - 1);
+            }
+        });
+    }
+
+    setupTouchNav() {
+        let startX = null;
+        document.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            if (startX === null) return;
+            const dx = e.changedTouches[0].clientX - startX;
+            if (Math.abs(dx) > 60) this.showSlide(this.current + (dx < 0 ? 1 : -1));
+            startX = null;
+        }, { passive: true });
+    }
+
+    setupWheelNav() {
+        let lastWheel = 0;
+        document.addEventListener('wheel', (e) => {
+            const now = Date.now();
+            if (now - lastWheel < 700 || Math.abs(e.deltaY) < 24) return;
+            lastWheel = now;
+            this.showSlide(this.current + (e.deltaY > 0 ? 1 : -1));
+        }, { passive: true });
+    }
+
+    showSlide(index) {
+        this.current = Math.max(0, Math.min(index, this.slides.length - 1));
+        if (this.navDots) {
+            this.navDots.forEach((d, i) => d.classList.toggle('current', i === this.current));
+        }
+        this.slides.forEach((slide, i) => {
+            const on = i === this.current;
+            slide.classList.toggle('active', on);
+            slide.classList.toggle('visible', on);
+            /* Videos: play on the active slide only, pause everywhere else */
+            slide.querySelectorAll('video').forEach(v => {
+                if (on) { v.play().catch(() => {}); } else { v.pause(); }
+            });
+        });
+    }
+}
+
+/* ============================================================
+   BEFORE / AFTER IMAGE COMPARE (Excel → dashboard slide)
+   Moving the mouse (or finger) across reveals the "after"
+   image via clip-path; the divider line follows the cursor.
+   ============================================================ */
+(function setupCompare() {
+    const box = document.getElementById('imgCompare');
+    if (!box) return;
+    const after = box.querySelector('.after');
+    const line = document.getElementById('imgCompareLine');
+    const hint = document.getElementById('imgCompareHint');
+    let interacted = false;
+    const update = (clientX) => {
+        const r = box.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * 100;
+        after.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+        line.style.left = pct + '%';
+        if (!interacted && hint) { hint.style.opacity = '0'; interacted = true; }
+    };
+    box.addEventListener('mousemove', (e) => update(e.clientX));
+    box.addEventListener('touchmove', (e) => update(e.touches[0].clientX), { passive: true });
+})();
+
+/* ============================================================
+   INLINE EDIT MODE
+   Hover the top-left corner (or press E) to reveal the toggle.
+   While editing: click any text to change it. Edits autosave to
+   localStorage and restore on reload. Ctrl+S downloads the
+   updated HTML file.
+   ============================================================ */
+const editor = {
+    isActive: false,
+    stage: document.getElementById('deckStage'),
+    /* The version suffix is bumped whenever the deck FILE changes.
+       Saved edit snapshots from an older version are discarded, so a
+       stale snapshot can never mask new slide content. */
+    storageKey: 'code-as-medium-deck-edits-v35',
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('editing', this.isActive);
+        document.getElementById('editToggle').classList.toggle('active', this.isActive);
+        this.stage.contentEditable = this.isActive ? 'true' : 'false';
+    },
+    save() {
+        try { localStorage.setItem(this.storageKey, this.stage.innerHTML); } catch (e) {}
+    },
+    restore() {
+        try {
+            /* Drop snapshots from older deck versions */
+            Object.keys(localStorage).forEach(k => {
+                if (k.startsWith('code-as-medium-deck-edits') && k !== this.storageKey) {
+                    localStorage.removeItem(k);
+                }
+            });
+            const saved = localStorage.getItem(this.storageKey);
+            if (saved) this.stage.innerHTML = saved;
+        } catch (e) {}
+    },
+    download() {
+        const wasEditing = this.isActive;
+        if (wasEditing) this.toggleEditMode();
+        const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'code-as-a-medium-for-storytelling.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+        if (wasEditing) this.toggleEditMode();
+    }
+};
+
+/* Restore any saved edits BEFORE the controller binds to slides */
+editor.restore();
+
+const editToggle = document.getElementById('editToggle');
+const hotzone = document.querySelector('.edit-hotzone');
+
+// Edit mode is an authoring-only tool (the pencil button, its hover hotzone,
+// and the "E" shortcut). It should ONLY exist when Zara is working on the deck
+// locally — never on the public deployment where the audience views it.
+// We detect "local" by hostname: localhost / 127.0.0.1, or the file opened
+// directly (file://, where hostname is empty). On any real host (deck.zarazhang.com,
+// *.vercel.app, etc.) we strip the edit UI out entirely.
+const IS_LOCAL = ['localhost', '127.0.0.1', ''].includes(location.hostname) || location.protocol === 'file:';
+
+if (!IS_LOCAL) {
+    // Public deck: remove the authoring controls so viewers never see them.
+    editToggle.remove();
+    hotzone.remove();
+} else {
+    // Local authoring: wire up the full edit experience.
+    let hideTimeout = null;
+
+    editToggle.addEventListener('click', () => editor.toggleEditMode());
+    hotzone.addEventListener('mouseenter', () => { clearTimeout(hideTimeout); editToggle.classList.add('show'); });
+    hotzone.addEventListener('mouseleave', () => {
+        hideTimeout = setTimeout(() => { if (!editor.isActive) editToggle.classList.remove('show'); }, 400);
+    });
+    editToggle.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+    editToggle.addEventListener('mouseleave', () => {
+        hideTimeout = setTimeout(() => { if (!editor.isActive) editToggle.classList.remove('show'); }, 400);
+    });
+    hotzone.addEventListener('click', () => editor.toggleEditMode());
+
+    document.addEventListener('keydown', (e) => {
+        if ((e.key === 'e' || e.key === 'E') && !editor.isActive && !e.metaKey && !e.ctrlKey) {
+            editor.toggleEditMode();
+        } else if (e.key === 'Escape' && editor.isActive) {
+            editor.toggleEditMode();
+        } else if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+            e.preventDefault(); editor.save(); editor.download();
+        }
+    });
+    document.getElementById('deckStage').addEventListener('input', () => editor.save());
+}
+
+/* ============================================================
+   LASER POINTER — follows the mouse, shrinks on click like a
+   real laser press. Stays hidden until the mouse first moves.
+   ============================================================ */
+const laser = document.getElementById('laser');
+document.addEventListener('mousemove', (e) => {
+    laser.style.left = e.clientX + 'px';
+    laser.style.top = e.clientY + 'px';
+    laser.style.opacity = '0.9';
+});
+document.addEventListener('mousedown', () => {
+    laser.style.transform = 'translate(-50%, -50%) scale(0.55)';
+});
+document.addEventListener('mouseup', () => {
+    laser.style.transform = 'translate(-50%, -50%) scale(1)';
+});
+document.documentElement.addEventListener('mouseleave', () => {
+    laser.style.opacity = '0';
+});
+
+/* ============================================================
+   CLICK-TO-ENLARGE — click any .zoomable image to open it in a
+   full-screen overlay; click the overlay or press Esc to close.
+   ============================================================ */
+/* Mark every photo/video frame as zoomable (except the before/after
+   compare, which has its own hover interaction, and media already inside
+   an expand panel). */
+document.querySelectorAll('.media-frame, .phone').forEach(el => {
+    if (el.closest('.box-panel') || el.closest('.compare')) return;
+    if (el.querySelector('img, video')) el.classList.add('zoomable');
+});
+
+function closeZoom() {
+    const ov = document.querySelector('.zoom-overlay');
+    if (ov) ov.remove();
+    document.body.classList.remove('overlay-open');
+}
+document.addEventListener('click', (e) => {
+    if (document.body.classList.contains('editing')) return;
+    const frame = e.target.closest('.zoomable');
+    if (!frame || document.querySelector('.zoom-overlay') || document.querySelector('.panel-overlay')) return;
+    const media = frame.querySelector('img, video');
+    if (!media) return;
+    const ov = document.createElement('div');
+    ov.className = 'zoom-overlay';
+    let big;
+    if (media.tagName === 'VIDEO') {
+        big = document.createElement('video');
+        big.src = media.currentSrc || media.getAttribute('src');
+        big.muted = media.muted;
+        big.loop = true; big.playsInline = true; big.setAttribute('playsinline', '');
+        setTimeout(() => big.play().catch(() => {}), 0);
+    } else {
+        big = document.createElement('img');
+        big.src = media.currentSrc || media.src;
+        big.alt = media.alt;
+    }
+    ov.appendChild(big);
+    ov.addEventListener('click', closeZoom);
+    document.body.appendChild(ov);
+    document.body.classList.add('overlay-open');
+});
+
+/* ============================================================
+   EXPAND PANELS — click a lesson card to open its [data-panel]
+   target in a centered overlay; click outside, the close button,
+   or Esc to return.
+   ============================================================ */
+function closePanel() {
+    const ov = document.querySelector('.panel-overlay');
+    if (ov) ov.remove();
+    document.body.classList.remove('overlay-open');
+}
+document.addEventListener('click', (e) => {
+    if (document.body.classList.contains('editing')) return;
+    const box = e.target.closest('[data-panel]');
+    if (!box || !box.dataset.panel || document.querySelector('.panel-overlay') || document.querySelector('.zoom-overlay')) return;
+    const src = document.getElementById(box.dataset.panel);
+    if (!src) return;
+    const ov = document.createElement('div');
+    ov.className = 'panel-overlay';
+    const card = document.createElement('div');
+    card.className = 'panel-card' + (src.dataset.card ? ' ' + src.dataset.card : '');
+    card.innerHTML = src.innerHTML;
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'panel-close'; closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', closePanel);
+    card.appendChild(closeBtn);
+    card.addEventListener('click', ev => ev.stopPropagation());
+    ov.appendChild(card);
+    ov.addEventListener('click', closePanel);
+    document.body.appendChild(ov);
+    document.body.classList.add('overlay-open');
+    /* Scale the card down if it would overflow the window, so the whole
+       panel is always visible with no scrolling. Re-run a few times in case
+       web fonts finish loading and change the measured height. */
+    const fitCard = () => {
+        card.style.transform = 'none';
+        /* phones use full-width + internal scroll instead of scaling, so the
+           panel never collapses into a thin strip */
+        if (window.matchMedia('(max-width: 820px)').matches) return;
+        const avH = window.innerHeight - 36, avW = window.innerWidth - 36;
+        const s = Math.min(1, avH / card.offsetHeight, avW / card.offsetWidth);
+        if (s < 1) card.style.transform = 'scale(' + s.toFixed(4) + ')';
+    };
+    requestAnimationFrame(fitCard);
+    setTimeout(fitCard, 90);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCard);
+    window.addEventListener('resize', fitCard);
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { closeZoom(); closePanel(); }
+}, true);
+
+/* Wrap each slide in a .slide-wrap so mobile can stack them as full-width
+   cards. The wrapper is display:contents on desktop, so this is invisible
+   there. Guarded so a restored (already-wrapped) snapshot isn't re-wrapped. */
+document.querySelectorAll('#deckStage > .slide').forEach(slide => {
+    const w = document.createElement('div');
+    w.className = 'slide-wrap';
+    slide.parentNode.insertBefore(w, slide);
+    w.appendChild(slide);
+});
+
+new SlidePresentation();
+</script>
+
+<!-- Vercel Web Analytics — counts page views & visitors. The script file
+     is served automatically by Vercel once Analytics is enabled for the project. -->
+<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script defer src="_vercel/insights/script.js"></script>
+</body>
+</html>
